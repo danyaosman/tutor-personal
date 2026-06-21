@@ -241,3 +241,165 @@ export const aiPreferenceDefaults = {
   weeklyInsights: true,
   shareAnonData: false,
 };
+
+// ===========================================================================
+// LEARNER-SIDE MOCK DATA
+// TODO: replace with real data from backend API
+// ===========================================================================
+
+export const learnerProfile = {
+  name: "Alex Rivera",
+  email: "alex.rivera@learner.io",
+  avatarInitials: "AR",
+  level: 7,
+  xp: 4820,
+  nextLevelXp: 6000,
+  streak: 12,
+  dailyGoalMinutes: 45,
+};
+
+export const learnerStats = [
+  { label: "Courses Enrolled", value: "4", delta: "1 finishing soon", tone: "blue" as const },
+  { label: "Hours Studied", value: "37h", delta: "+5h this week", tone: "cyan" as const },
+  { label: "Avg. Score", value: "84%", delta: "+2% vs last week", tone: "success" as const },
+  { label: "XP / Level", value: "Lvl 7", delta: "1,180 XP to Lvl 8", tone: "purple" as const },
+];
+
+export const continueLearning = {
+  course: "Intro to Machine Learning",
+  module: "Trees, Forests & Boosting",
+  lesson: "Lesson 3 — Gradient Boosted Trees",
+  progress: 62,
+  tutor: "Dr. Maya Chen",
+};
+
+export const todaysTasks = [
+  { title: "Finish lesson: Gradient Boosted Trees", due: "Today", kind: "Lesson" },
+  { title: "Submit Assignment: Build a Linear Regressor", due: "Today", kind: "Assignment" },
+  { title: "Take quiz: Recursion Patterns", due: "Tomorrow", kind: "Quiz" },
+  { title: "Review weak topic: Big-O Analysis", due: "This week", kind: "Practice" },
+];
+
+export const recentSessions = [
+  { id: "s1", tutor: "Dr. Maya Chen", subject: "Intro to ML", preview: "Walked through bias-variance tradeoff with examples.", time: "2h ago" },
+  { id: "s2", tutor: "Prof. Diego Santos", subject: "DSA", preview: "Practiced 3 recursion problems. You got 2 on first try!", time: "Yesterday" },
+  { id: "s3", tutor: "Dr. Maya Chen", subject: "Intro to ML", preview: "Explained gradient descent with a worked example.", time: "2 days ago" },
+];
+
+export const enrolledCourses = [
+  { id: "lc1", title: "Intro to Machine Learning", tutor: "Dr. Maya Chen", progress: 62, nextModule: "Trees, Forests & Boosting", status: "In Progress" as const, lessons: 24, completed: 15 },
+  { id: "lc2", title: "Data Structures & Algorithms", tutor: "Prof. Diego Santos", progress: 41, nextModule: "Linked Lists & Stacks", status: "In Progress" as const, lessons: 30, completed: 12 },
+  { id: "lc3", title: "Web Development Bootcamp", tutor: "Sara Kim", progress: 88, nextModule: "Deploying React Apps", status: "Almost Done" as const, lessons: 40, completed: 35 },
+  { id: "lc4", title: "Intro to Python (2024)", tutor: "Dr. Maya Chen", progress: 100, nextModule: "—", status: "Completed" as const, lessons: 18, completed: 18 },
+];
+
+export const aiTutors = [
+  { id: "t1", name: "Dr. Maya Chen", subject: "Machine Learning", style: "Step-by-step", tone: "Encouraging", samplePrompt: "Explain backpropagation like I'm a beginner.", rating: 4.9 },
+  { id: "t2", name: "Prof. Diego Santos", subject: "Algorithms", style: "Socratic", tone: "Friendly", samplePrompt: "Why is BFS better than DFS for shortest path?", rating: 4.8 },
+  { id: "t3", name: "Sara Kim", subject: "Web Development", style: "Example-driven", tone: "Friendly", samplePrompt: "Show me how useEffect actually works.", rating: 4.7 },
+  { id: "t4", name: "Dr. Imani Okafor", subject: "Advanced NLP", style: "Conceptual", tone: "Formal", samplePrompt: "Walk me through attention in a Transformer.", rating: 4.9 },
+];
+
+export const sessionThreads = [
+  { id: "st1", title: "Gradient descent intuition", tutor: "Dr. Maya Chen", course: "Intro to ML", time: "2h ago", unread: 0 },
+  { id: "st2", title: "Recursion vs iteration", tutor: "Prof. Diego Santos", course: "DSA", time: "Yesterday", unread: 1 },
+  { id: "st3", title: "useEffect dependency arrays", tutor: "Sara Kim", course: "Web Dev", time: "2 days ago", unread: 0 },
+  { id: "st4", title: "BFS vs DFS for shortest path", tutor: "Prof. Diego Santos", course: "DSA", time: "Last week", unread: 0 },
+];
+
+export const sampleChat = [
+  { role: "tutor" as const, name: "Dr. Maya Chen", text: "Hey Alex! Want to pick up where we left off on gradient boosted trees, or start fresh on something new?", time: "10:02" },
+  { role: "user" as const, name: "Alex", text: "Let's continue. Why does boosting work better than a single deep tree?", time: "10:03" },
+  { role: "tutor" as const, name: "Dr. Maya Chen", text: "Great question. A single deep tree memorizes the training set and overfits. Boosting builds many shallow trees, each correcting the previous one's mistakes — so the model generalizes better. Want me to show this with a quick example on the housing dataset?", time: "10:03" },
+  { role: "user" as const, name: "Alex", text: "Yes please, with code.", time: "10:04" },
+];
+
+export const suggestedFollowups = [
+  "How do I tune the learning rate?",
+  "What's the difference between XGBoost and LightGBM?",
+  "Give me a practice problem on this.",
+];
+
+export const learnerAssignments = [
+  { id: "la1", title: "Build a Linear Regressor", course: "Intro to ML", due: "Today", state: "To Do" as const, grade: null },
+  { id: "la2", title: "Implement LRU Cache", course: "DSA", due: "Jun 26", state: "To Do" as const, grade: null },
+  { id: "la3", title: "Portfolio Site (React)", course: "Web Dev", due: "Jun 30", state: "To Do" as const, grade: null },
+  { id: "la4", title: "EDA on Titanic", course: "Intro to ML", due: "Submitted May 30", state: "Submitted" as const, grade: null },
+  { id: "la5", title: "Sorting Showdown", course: "DSA", due: "Graded May 14", state: "Graded" as const, grade: 92 },
+  { id: "la6", title: "Calculator App", course: "Web Dev", due: "Graded May 02", state: "Graded" as const, grade: 88 },
+];
+
+export const learnerQuizzes = [
+  { id: "lq1", title: "Gradient Descent Basics", course: "Intro to ML", questions: 12, attempts: 2, best: 88, status: "Completed" as const },
+  { id: "lq2", title: "Recursion Patterns", course: "DSA", questions: 10, attempts: 0, best: null, status: "Available" as const },
+  { id: "lq3", title: "React Hooks Deep-Dive", course: "Web Dev", questions: 15, attempts: 1, best: 80, status: "Completed" as const },
+  { id: "lq4", title: "Big-O Sprint", course: "DSA", questions: 20, attempts: 1, best: 62, status: "Retake" as const },
+  { id: "lq5", title: "Probability Refresher", course: "Intro to ML", questions: 10, attempts: 0, best: null, status: "Available" as const },
+];
+
+export const masteryOverTime = [
+  { week: "W1", mastery: 38 },
+  { week: "W2", mastery: 45 },
+  { week: "W3", mastery: 52 },
+  { week: "W4", mastery: 58 },
+  { week: "W5", mastery: 64 },
+  { week: "W6", mastery: 68 },
+  { week: "W7", mastery: 72 },
+  { week: "W8", mastery: 78 },
+];
+
+export const scoreBySubject = [
+  { subject: "ML", score: 84 },
+  { subject: "DSA", score: 71 },
+  { subject: "Web Dev", score: 91 },
+  { subject: "Python", score: 95 },
+];
+
+export const achievements = [
+  { title: "7-day streak", icon: "🔥", earned: true },
+  { title: "Quiz Master", icon: "🏆", earned: true },
+  { title: "First Project", icon: "🚀", earned: true },
+  { title: "Night Owl", icon: "🦉", earned: true },
+  { title: "Speed Coder", icon: "⚡", earned: false },
+  { title: "Course Crusher", icon: "💪", earned: false },
+];
+
+export const learnerWeakTopics = [
+  { topic: "Big-O Analysis", mastery: 38, gap: "high", action: "Generate 10-question practice set" },
+  { topic: "Recursion — Backtracking", mastery: 45, gap: "high", action: "Watch 8-min visual explainer" },
+  { topic: "Probability — Bayes Theorem", mastery: 52, gap: "medium", action: "Take refresher quiz" },
+  { topic: "CSS Grid layouts", mastery: 58, gap: "medium", action: "Try interactive playground" },
+  { topic: "Async / Await in JS", mastery: 61, gap: "low", action: "Read 5-min summary" },
+];
+
+export const learnerResources = [
+  { id: "lr1", name: "Lecture 4 — Gradient Descent.pdf", type: "PDF" as const, course: "Intro to ML", bookmarked: true, updated: "2h ago" },
+  { id: "lr2", name: "Recursion deep-dive.mp4", type: "Video" as const, course: "DSA", bookmarked: false, updated: "10m ago" },
+  { id: "lr3", name: "REST APIs cheatsheet", type: "Notes" as const, course: "Web Dev", bookmarked: true, updated: "Yesterday" },
+  { id: "lr4", name: "Transformer paper (Vaswani 2017)", type: "Link" as const, course: "Advanced NLP", bookmarked: false, updated: "3 days ago" },
+  { id: "lr5", name: "Sorting algorithms.pdf", type: "PDF" as const, course: "DSA", bookmarked: false, updated: "5 days ago" },
+  { id: "lr6", name: "React hooks walkthrough.mp4", type: "Video" as const, course: "Web Dev", bookmarked: true, updated: "1 week ago" },
+];
+
+export const learnerPastQuestions = [
+  { id: "lq_a", subject: "Recursion vs iteration", course: "DSA", time: "Yesterday", status: "Replied" as const },
+  { id: "lq_b", subject: "How do I tune the learning rate?", course: "Intro to ML", time: "2 days ago", status: "Resolved" as const },
+  { id: "lq_c", subject: "Best React state management for small apps", course: "Web Dev", time: "Last week", status: "Resolved" as const },
+];
+
+export const learnerNotificationDefaults = {
+  newAssignments: true,
+  dueSoonReminders: true,
+  tutorReplies: true,
+  weeklyProgress: true,
+  productUpdates: false,
+};
+
+export const learnerPreferenceDefaults = {
+  preferredStyle: "Step-by-step",
+  preferredTone: "Encouraging",
+  difficulty: 3,
+  dailyGoalMinutes: 45,
+  voiceReplies: false,
+  showAiSuggestions: true,
+};
