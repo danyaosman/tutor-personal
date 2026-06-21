@@ -14,6 +14,7 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LearnerRouteImport } from './routes/learner'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LearnerIndexRouteImport } from './routes/learner.index'
 import { Route as TutorWeaknessAnalysisRouteImport } from './routes/tutor.weakness-analysis'
 import { Route as TutorSyllabusRouteImport } from './routes/tutor.syllabus'
 import { Route as TutorSettingsRouteImport } from './routes/tutor.settings'
@@ -25,6 +26,16 @@ import { Route as TutorDigitalTwinRouteImport } from './routes/tutor.digital-twi
 import { Route as TutorCoursesRouteImport } from './routes/tutor.courses'
 import { Route as TutorAssignmentsRouteImport } from './routes/tutor.assignments'
 import { Route as TutorAnalyticsRouteImport } from './routes/tutor.analytics'
+import { Route as LearnerWeaknessesRouteImport } from './routes/learner.weaknesses'
+import { Route as LearnerTutorsRouteImport } from './routes/learner.tutors'
+import { Route as LearnerSettingsRouteImport } from './routes/learner.settings'
+import { Route as LearnerSessionsRouteImport } from './routes/learner.sessions'
+import { Route as LearnerResourcesRouteImport } from './routes/learner.resources'
+import { Route as LearnerQuizzesRouteImport } from './routes/learner.quizzes'
+import { Route as LearnerProgressRouteImport } from './routes/learner.progress'
+import { Route as LearnerCoursesRouteImport } from './routes/learner.courses'
+import { Route as LearnerAssignmentsRouteImport } from './routes/learner.assignments'
+import { Route as LearnerAskRouteImport } from './routes/learner.ask'
 
 const SelectRoleRoute = SelectRoleRouteImport.update({
   id: '/select-role',
@@ -50,6 +61,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const LearnerIndexRoute = LearnerIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LearnerRoute,
 } as any)
 const TutorWeaknessAnalysisRoute = TutorWeaknessAnalysisRouteImport.update({
   id: '/tutor/weakness-analysis',
@@ -106,13 +122,73 @@ const TutorAnalyticsRoute = TutorAnalyticsRouteImport.update({
   path: '/tutor/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LearnerWeaknessesRoute = LearnerWeaknessesRouteImport.update({
+  id: '/weaknesses',
+  path: '/weaknesses',
+  getParentRoute: () => LearnerRoute,
+} as any)
+const LearnerTutorsRoute = LearnerTutorsRouteImport.update({
+  id: '/tutors',
+  path: '/tutors',
+  getParentRoute: () => LearnerRoute,
+} as any)
+const LearnerSettingsRoute = LearnerSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => LearnerRoute,
+} as any)
+const LearnerSessionsRoute = LearnerSessionsRouteImport.update({
+  id: '/sessions',
+  path: '/sessions',
+  getParentRoute: () => LearnerRoute,
+} as any)
+const LearnerResourcesRoute = LearnerResourcesRouteImport.update({
+  id: '/resources',
+  path: '/resources',
+  getParentRoute: () => LearnerRoute,
+} as any)
+const LearnerQuizzesRoute = LearnerQuizzesRouteImport.update({
+  id: '/quizzes',
+  path: '/quizzes',
+  getParentRoute: () => LearnerRoute,
+} as any)
+const LearnerProgressRoute = LearnerProgressRouteImport.update({
+  id: '/progress',
+  path: '/progress',
+  getParentRoute: () => LearnerRoute,
+} as any)
+const LearnerCoursesRoute = LearnerCoursesRouteImport.update({
+  id: '/courses',
+  path: '/courses',
+  getParentRoute: () => LearnerRoute,
+} as any)
+const LearnerAssignmentsRoute = LearnerAssignmentsRouteImport.update({
+  id: '/assignments',
+  path: '/assignments',
+  getParentRoute: () => LearnerRoute,
+} as any)
+const LearnerAskRoute = LearnerAskRouteImport.update({
+  id: '/ask',
+  path: '/ask',
+  getParentRoute: () => LearnerRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/learner': typeof LearnerRoute
+  '/learner': typeof LearnerRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/select-role': typeof SelectRoleRoute
+  '/learner/ask': typeof LearnerAskRoute
+  '/learner/assignments': typeof LearnerAssignmentsRoute
+  '/learner/courses': typeof LearnerCoursesRoute
+  '/learner/progress': typeof LearnerProgressRoute
+  '/learner/quizzes': typeof LearnerQuizzesRoute
+  '/learner/resources': typeof LearnerResourcesRoute
+  '/learner/sessions': typeof LearnerSessionsRoute
+  '/learner/settings': typeof LearnerSettingsRoute
+  '/learner/tutors': typeof LearnerTutorsRoute
+  '/learner/weaknesses': typeof LearnerWeaknessesRoute
   '/tutor/analytics': typeof TutorAnalyticsRoute
   '/tutor/assignments': typeof TutorAssignmentsRoute
   '/tutor/courses': typeof TutorCoursesRoute
@@ -124,13 +200,23 @@ export interface FileRoutesByFullPath {
   '/tutor/settings': typeof TutorSettingsRoute
   '/tutor/syllabus': typeof TutorSyllabusRoute
   '/tutor/weakness-analysis': typeof TutorWeaknessAnalysisRoute
+  '/learner/': typeof LearnerIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/learner': typeof LearnerRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/select-role': typeof SelectRoleRoute
+  '/learner/ask': typeof LearnerAskRoute
+  '/learner/assignments': typeof LearnerAssignmentsRoute
+  '/learner/courses': typeof LearnerCoursesRoute
+  '/learner/progress': typeof LearnerProgressRoute
+  '/learner/quizzes': typeof LearnerQuizzesRoute
+  '/learner/resources': typeof LearnerResourcesRoute
+  '/learner/sessions': typeof LearnerSessionsRoute
+  '/learner/settings': typeof LearnerSettingsRoute
+  '/learner/tutors': typeof LearnerTutorsRoute
+  '/learner/weaknesses': typeof LearnerWeaknessesRoute
   '/tutor/analytics': typeof TutorAnalyticsRoute
   '/tutor/assignments': typeof TutorAssignmentsRoute
   '/tutor/courses': typeof TutorCoursesRoute
@@ -142,14 +228,25 @@ export interface FileRoutesByTo {
   '/tutor/settings': typeof TutorSettingsRoute
   '/tutor/syllabus': typeof TutorSyllabusRoute
   '/tutor/weakness-analysis': typeof TutorWeaknessAnalysisRoute
+  '/learner': typeof LearnerIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/learner': typeof LearnerRoute
+  '/learner': typeof LearnerRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/select-role': typeof SelectRoleRoute
+  '/learner/ask': typeof LearnerAskRoute
+  '/learner/assignments': typeof LearnerAssignmentsRoute
+  '/learner/courses': typeof LearnerCoursesRoute
+  '/learner/progress': typeof LearnerProgressRoute
+  '/learner/quizzes': typeof LearnerQuizzesRoute
+  '/learner/resources': typeof LearnerResourcesRoute
+  '/learner/sessions': typeof LearnerSessionsRoute
+  '/learner/settings': typeof LearnerSettingsRoute
+  '/learner/tutors': typeof LearnerTutorsRoute
+  '/learner/weaknesses': typeof LearnerWeaknessesRoute
   '/tutor/analytics': typeof TutorAnalyticsRoute
   '/tutor/assignments': typeof TutorAssignmentsRoute
   '/tutor/courses': typeof TutorCoursesRoute
@@ -161,6 +258,7 @@ export interface FileRoutesById {
   '/tutor/settings': typeof TutorSettingsRoute
   '/tutor/syllabus': typeof TutorSyllabusRoute
   '/tutor/weakness-analysis': typeof TutorWeaknessAnalysisRoute
+  '/learner/': typeof LearnerIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -170,6 +268,16 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/select-role'
+    | '/learner/ask'
+    | '/learner/assignments'
+    | '/learner/courses'
+    | '/learner/progress'
+    | '/learner/quizzes'
+    | '/learner/resources'
+    | '/learner/sessions'
+    | '/learner/settings'
+    | '/learner/tutors'
+    | '/learner/weaknesses'
     | '/tutor/analytics'
     | '/tutor/assignments'
     | '/tutor/courses'
@@ -181,13 +289,23 @@ export interface FileRouteTypes {
     | '/tutor/settings'
     | '/tutor/syllabus'
     | '/tutor/weakness-analysis'
+    | '/learner/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/learner'
     | '/login'
     | '/register'
     | '/select-role'
+    | '/learner/ask'
+    | '/learner/assignments'
+    | '/learner/courses'
+    | '/learner/progress'
+    | '/learner/quizzes'
+    | '/learner/resources'
+    | '/learner/sessions'
+    | '/learner/settings'
+    | '/learner/tutors'
+    | '/learner/weaknesses'
     | '/tutor/analytics'
     | '/tutor/assignments'
     | '/tutor/courses'
@@ -199,6 +317,7 @@ export interface FileRouteTypes {
     | '/tutor/settings'
     | '/tutor/syllabus'
     | '/tutor/weakness-analysis'
+    | '/learner'
   id:
     | '__root__'
     | '/'
@@ -206,6 +325,16 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/select-role'
+    | '/learner/ask'
+    | '/learner/assignments'
+    | '/learner/courses'
+    | '/learner/progress'
+    | '/learner/quizzes'
+    | '/learner/resources'
+    | '/learner/sessions'
+    | '/learner/settings'
+    | '/learner/tutors'
+    | '/learner/weaknesses'
     | '/tutor/analytics'
     | '/tutor/assignments'
     | '/tutor/courses'
@@ -217,11 +346,12 @@ export interface FileRouteTypes {
     | '/tutor/settings'
     | '/tutor/syllabus'
     | '/tutor/weakness-analysis'
+    | '/learner/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  LearnerRoute: typeof LearnerRoute
+  LearnerRoute: typeof LearnerRouteWithChildren
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   SelectRoleRoute: typeof SelectRoleRoute
@@ -274,6 +404,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/learner/': {
+      id: '/learner/'
+      path: '/'
+      fullPath: '/learner/'
+      preLoaderRoute: typeof LearnerIndexRouteImport
+      parentRoute: typeof LearnerRoute
     }
     '/tutor/weakness-analysis': {
       id: '/tutor/weakness-analysis'
@@ -352,12 +489,113 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TutorAnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/learner/weaknesses': {
+      id: '/learner/weaknesses'
+      path: '/weaknesses'
+      fullPath: '/learner/weaknesses'
+      preLoaderRoute: typeof LearnerWeaknessesRouteImport
+      parentRoute: typeof LearnerRoute
+    }
+    '/learner/tutors': {
+      id: '/learner/tutors'
+      path: '/tutors'
+      fullPath: '/learner/tutors'
+      preLoaderRoute: typeof LearnerTutorsRouteImport
+      parentRoute: typeof LearnerRoute
+    }
+    '/learner/settings': {
+      id: '/learner/settings'
+      path: '/settings'
+      fullPath: '/learner/settings'
+      preLoaderRoute: typeof LearnerSettingsRouteImport
+      parentRoute: typeof LearnerRoute
+    }
+    '/learner/sessions': {
+      id: '/learner/sessions'
+      path: '/sessions'
+      fullPath: '/learner/sessions'
+      preLoaderRoute: typeof LearnerSessionsRouteImport
+      parentRoute: typeof LearnerRoute
+    }
+    '/learner/resources': {
+      id: '/learner/resources'
+      path: '/resources'
+      fullPath: '/learner/resources'
+      preLoaderRoute: typeof LearnerResourcesRouteImport
+      parentRoute: typeof LearnerRoute
+    }
+    '/learner/quizzes': {
+      id: '/learner/quizzes'
+      path: '/quizzes'
+      fullPath: '/learner/quizzes'
+      preLoaderRoute: typeof LearnerQuizzesRouteImport
+      parentRoute: typeof LearnerRoute
+    }
+    '/learner/progress': {
+      id: '/learner/progress'
+      path: '/progress'
+      fullPath: '/learner/progress'
+      preLoaderRoute: typeof LearnerProgressRouteImport
+      parentRoute: typeof LearnerRoute
+    }
+    '/learner/courses': {
+      id: '/learner/courses'
+      path: '/courses'
+      fullPath: '/learner/courses'
+      preLoaderRoute: typeof LearnerCoursesRouteImport
+      parentRoute: typeof LearnerRoute
+    }
+    '/learner/assignments': {
+      id: '/learner/assignments'
+      path: '/assignments'
+      fullPath: '/learner/assignments'
+      preLoaderRoute: typeof LearnerAssignmentsRouteImport
+      parentRoute: typeof LearnerRoute
+    }
+    '/learner/ask': {
+      id: '/learner/ask'
+      path: '/ask'
+      fullPath: '/learner/ask'
+      preLoaderRoute: typeof LearnerAskRouteImport
+      parentRoute: typeof LearnerRoute
+    }
   }
 }
 
+interface LearnerRouteChildren {
+  LearnerAskRoute: typeof LearnerAskRoute
+  LearnerAssignmentsRoute: typeof LearnerAssignmentsRoute
+  LearnerCoursesRoute: typeof LearnerCoursesRoute
+  LearnerProgressRoute: typeof LearnerProgressRoute
+  LearnerQuizzesRoute: typeof LearnerQuizzesRoute
+  LearnerResourcesRoute: typeof LearnerResourcesRoute
+  LearnerSessionsRoute: typeof LearnerSessionsRoute
+  LearnerSettingsRoute: typeof LearnerSettingsRoute
+  LearnerTutorsRoute: typeof LearnerTutorsRoute
+  LearnerWeaknessesRoute: typeof LearnerWeaknessesRoute
+  LearnerIndexRoute: typeof LearnerIndexRoute
+}
+
+const LearnerRouteChildren: LearnerRouteChildren = {
+  LearnerAskRoute: LearnerAskRoute,
+  LearnerAssignmentsRoute: LearnerAssignmentsRoute,
+  LearnerCoursesRoute: LearnerCoursesRoute,
+  LearnerProgressRoute: LearnerProgressRoute,
+  LearnerQuizzesRoute: LearnerQuizzesRoute,
+  LearnerResourcesRoute: LearnerResourcesRoute,
+  LearnerSessionsRoute: LearnerSessionsRoute,
+  LearnerSettingsRoute: LearnerSettingsRoute,
+  LearnerTutorsRoute: LearnerTutorsRoute,
+  LearnerWeaknessesRoute: LearnerWeaknessesRoute,
+  LearnerIndexRoute: LearnerIndexRoute,
+}
+
+const LearnerRouteWithChildren =
+  LearnerRoute._addFileChildren(LearnerRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  LearnerRoute: LearnerRoute,
+  LearnerRoute: LearnerRouteWithChildren,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   SelectRoleRoute: SelectRoleRoute,
