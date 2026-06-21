@@ -16,7 +16,8 @@ import {
 } from "lucide-react";
 import { learnerProfile } from "@/data/mockData";
 
-const nav = [
+type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean };
+const nav: NavItem[] = [
   { to: "/learner", label: "Overview", icon: LayoutDashboard, exact: true },
   { to: "/learner/courses", label: "My Courses", icon: BookOpen },
   { to: "/learner/tutors", label: "AI Tutors", icon: Bot },
@@ -28,7 +29,7 @@ const nav = [
   { to: "/learner/resources", label: "Library", icon: Library },
   { to: "/learner/ask", label: "Ask a Tutor", icon: Send },
   { to: "/learner/settings", label: "Settings", icon: Settings },
-] as const;
+];
 
 export function LearnerSidebarNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
