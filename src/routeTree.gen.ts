@@ -9,38 +9,265 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SelectRoleRouteImport } from './routes/select-role'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as LearnerRouteImport } from './routes/learner'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TutorWeaknessAnalysisRouteImport } from './routes/tutor.weakness-analysis'
+import { Route as TutorSyllabusRouteImport } from './routes/tutor.syllabus'
+import { Route as TutorSettingsRouteImport } from './routes/tutor.settings'
+import { Route as TutorResourcesRouteImport } from './routes/tutor.resources'
+import { Route as TutorRequestsRouteImport } from './routes/tutor.requests'
+import { Route as TutorQuizzesRouteImport } from './routes/tutor.quizzes'
+import { Route as TutorOverviewRouteImport } from './routes/tutor.overview'
+import { Route as TutorDigitalTwinRouteImport } from './routes/tutor.digital-twin'
+import { Route as TutorCoursesRouteImport } from './routes/tutor.courses'
+import { Route as TutorAssignmentsRouteImport } from './routes/tutor.assignments'
+import { Route as TutorAnalyticsRouteImport } from './routes/tutor.analytics'
 
+const SelectRoleRoute = SelectRoleRouteImport.update({
+  id: '/select-role',
+  path: '/select-role',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LearnerRoute = LearnerRouteImport.update({
+  id: '/learner',
+  path: '/learner',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TutorWeaknessAnalysisRoute = TutorWeaknessAnalysisRouteImport.update({
+  id: '/tutor/weakness-analysis',
+  path: '/tutor/weakness-analysis',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TutorSyllabusRoute = TutorSyllabusRouteImport.update({
+  id: '/tutor/syllabus',
+  path: '/tutor/syllabus',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TutorSettingsRoute = TutorSettingsRouteImport.update({
+  id: '/tutor/settings',
+  path: '/tutor/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TutorResourcesRoute = TutorResourcesRouteImport.update({
+  id: '/tutor/resources',
+  path: '/tutor/resources',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TutorRequestsRoute = TutorRequestsRouteImport.update({
+  id: '/tutor/requests',
+  path: '/tutor/requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TutorQuizzesRoute = TutorQuizzesRouteImport.update({
+  id: '/tutor/quizzes',
+  path: '/tutor/quizzes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TutorOverviewRoute = TutorOverviewRouteImport.update({
+  id: '/tutor/overview',
+  path: '/tutor/overview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TutorDigitalTwinRoute = TutorDigitalTwinRouteImport.update({
+  id: '/tutor/digital-twin',
+  path: '/tutor/digital-twin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TutorCoursesRoute = TutorCoursesRouteImport.update({
+  id: '/tutor/courses',
+  path: '/tutor/courses',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TutorAssignmentsRoute = TutorAssignmentsRouteImport.update({
+  id: '/tutor/assignments',
+  path: '/tutor/assignments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TutorAnalyticsRoute = TutorAnalyticsRouteImport.update({
+  id: '/tutor/analytics',
+  path: '/tutor/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/learner': typeof LearnerRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/select-role': typeof SelectRoleRoute
+  '/tutor/analytics': typeof TutorAnalyticsRoute
+  '/tutor/assignments': typeof TutorAssignmentsRoute
+  '/tutor/courses': typeof TutorCoursesRoute
+  '/tutor/digital-twin': typeof TutorDigitalTwinRoute
+  '/tutor/overview': typeof TutorOverviewRoute
+  '/tutor/quizzes': typeof TutorQuizzesRoute
+  '/tutor/requests': typeof TutorRequestsRoute
+  '/tutor/resources': typeof TutorResourcesRoute
+  '/tutor/settings': typeof TutorSettingsRoute
+  '/tutor/syllabus': typeof TutorSyllabusRoute
+  '/tutor/weakness-analysis': typeof TutorWeaknessAnalysisRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/learner': typeof LearnerRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/select-role': typeof SelectRoleRoute
+  '/tutor/analytics': typeof TutorAnalyticsRoute
+  '/tutor/assignments': typeof TutorAssignmentsRoute
+  '/tutor/courses': typeof TutorCoursesRoute
+  '/tutor/digital-twin': typeof TutorDigitalTwinRoute
+  '/tutor/overview': typeof TutorOverviewRoute
+  '/tutor/quizzes': typeof TutorQuizzesRoute
+  '/tutor/requests': typeof TutorRequestsRoute
+  '/tutor/resources': typeof TutorResourcesRoute
+  '/tutor/settings': typeof TutorSettingsRoute
+  '/tutor/syllabus': typeof TutorSyllabusRoute
+  '/tutor/weakness-analysis': typeof TutorWeaknessAnalysisRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/learner': typeof LearnerRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
+  '/select-role': typeof SelectRoleRoute
+  '/tutor/analytics': typeof TutorAnalyticsRoute
+  '/tutor/assignments': typeof TutorAssignmentsRoute
+  '/tutor/courses': typeof TutorCoursesRoute
+  '/tutor/digital-twin': typeof TutorDigitalTwinRoute
+  '/tutor/overview': typeof TutorOverviewRoute
+  '/tutor/quizzes': typeof TutorQuizzesRoute
+  '/tutor/requests': typeof TutorRequestsRoute
+  '/tutor/resources': typeof TutorResourcesRoute
+  '/tutor/settings': typeof TutorSettingsRoute
+  '/tutor/syllabus': typeof TutorSyllabusRoute
+  '/tutor/weakness-analysis': typeof TutorWeaknessAnalysisRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/learner'
+    | '/login'
+    | '/register'
+    | '/select-role'
+    | '/tutor/analytics'
+    | '/tutor/assignments'
+    | '/tutor/courses'
+    | '/tutor/digital-twin'
+    | '/tutor/overview'
+    | '/tutor/quizzes'
+    | '/tutor/requests'
+    | '/tutor/resources'
+    | '/tutor/settings'
+    | '/tutor/syllabus'
+    | '/tutor/weakness-analysis'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/learner'
+    | '/login'
+    | '/register'
+    | '/select-role'
+    | '/tutor/analytics'
+    | '/tutor/assignments'
+    | '/tutor/courses'
+    | '/tutor/digital-twin'
+    | '/tutor/overview'
+    | '/tutor/quizzes'
+    | '/tutor/requests'
+    | '/tutor/resources'
+    | '/tutor/settings'
+    | '/tutor/syllabus'
+    | '/tutor/weakness-analysis'
+  id:
+    | '__root__'
+    | '/'
+    | '/learner'
+    | '/login'
+    | '/register'
+    | '/select-role'
+    | '/tutor/analytics'
+    | '/tutor/assignments'
+    | '/tutor/courses'
+    | '/tutor/digital-twin'
+    | '/tutor/overview'
+    | '/tutor/quizzes'
+    | '/tutor/requests'
+    | '/tutor/resources'
+    | '/tutor/settings'
+    | '/tutor/syllabus'
+    | '/tutor/weakness-analysis'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LearnerRoute: typeof LearnerRoute
+  LoginRoute: typeof LoginRoute
+  RegisterRoute: typeof RegisterRoute
+  SelectRoleRoute: typeof SelectRoleRoute
+  TutorAnalyticsRoute: typeof TutorAnalyticsRoute
+  TutorAssignmentsRoute: typeof TutorAssignmentsRoute
+  TutorCoursesRoute: typeof TutorCoursesRoute
+  TutorDigitalTwinRoute: typeof TutorDigitalTwinRoute
+  TutorOverviewRoute: typeof TutorOverviewRoute
+  TutorQuizzesRoute: typeof TutorQuizzesRoute
+  TutorRequestsRoute: typeof TutorRequestsRoute
+  TutorResourcesRoute: typeof TutorResourcesRoute
+  TutorSettingsRoute: typeof TutorSettingsRoute
+  TutorSyllabusRoute: typeof TutorSyllabusRoute
+  TutorWeaknessAnalysisRoute: typeof TutorWeaknessAnalysisRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/select-role': {
+      id: '/select-role'
+      path: '/select-role'
+      fullPath: '/select-role'
+      preLoaderRoute: typeof SelectRoleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/learner': {
+      id: '/learner'
+      path: '/learner'
+      fullPath: '/learner'
+      preLoaderRoute: typeof LearnerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +275,104 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tutor/weakness-analysis': {
+      id: '/tutor/weakness-analysis'
+      path: '/tutor/weakness-analysis'
+      fullPath: '/tutor/weakness-analysis'
+      preLoaderRoute: typeof TutorWeaknessAnalysisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tutor/syllabus': {
+      id: '/tutor/syllabus'
+      path: '/tutor/syllabus'
+      fullPath: '/tutor/syllabus'
+      preLoaderRoute: typeof TutorSyllabusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tutor/settings': {
+      id: '/tutor/settings'
+      path: '/tutor/settings'
+      fullPath: '/tutor/settings'
+      preLoaderRoute: typeof TutorSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tutor/resources': {
+      id: '/tutor/resources'
+      path: '/tutor/resources'
+      fullPath: '/tutor/resources'
+      preLoaderRoute: typeof TutorResourcesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tutor/requests': {
+      id: '/tutor/requests'
+      path: '/tutor/requests'
+      fullPath: '/tutor/requests'
+      preLoaderRoute: typeof TutorRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tutor/quizzes': {
+      id: '/tutor/quizzes'
+      path: '/tutor/quizzes'
+      fullPath: '/tutor/quizzes'
+      preLoaderRoute: typeof TutorQuizzesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tutor/overview': {
+      id: '/tutor/overview'
+      path: '/tutor/overview'
+      fullPath: '/tutor/overview'
+      preLoaderRoute: typeof TutorOverviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tutor/digital-twin': {
+      id: '/tutor/digital-twin'
+      path: '/tutor/digital-twin'
+      fullPath: '/tutor/digital-twin'
+      preLoaderRoute: typeof TutorDigitalTwinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tutor/courses': {
+      id: '/tutor/courses'
+      path: '/tutor/courses'
+      fullPath: '/tutor/courses'
+      preLoaderRoute: typeof TutorCoursesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tutor/assignments': {
+      id: '/tutor/assignments'
+      path: '/tutor/assignments'
+      fullPath: '/tutor/assignments'
+      preLoaderRoute: typeof TutorAssignmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tutor/analytics': {
+      id: '/tutor/analytics'
+      path: '/tutor/analytics'
+      fullPath: '/tutor/analytics'
+      preLoaderRoute: typeof TutorAnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LearnerRoute: LearnerRoute,
+  LoginRoute: LoginRoute,
+  RegisterRoute: RegisterRoute,
+  SelectRoleRoute: SelectRoleRoute,
+  TutorAnalyticsRoute: TutorAnalyticsRoute,
+  TutorAssignmentsRoute: TutorAssignmentsRoute,
+  TutorCoursesRoute: TutorCoursesRoute,
+  TutorDigitalTwinRoute: TutorDigitalTwinRoute,
+  TutorOverviewRoute: TutorOverviewRoute,
+  TutorQuizzesRoute: TutorQuizzesRoute,
+  TutorRequestsRoute: TutorRequestsRoute,
+  TutorResourcesRoute: TutorResourcesRoute,
+  TutorSettingsRoute: TutorSettingsRoute,
+  TutorSyllabusRoute: TutorSyllabusRoute,
+  TutorWeaknessAnalysisRoute: TutorWeaknessAnalysisRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
