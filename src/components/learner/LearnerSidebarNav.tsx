@@ -15,6 +15,9 @@ import {
   LogOut,
 } from "lucide-react";
 import { learnerProfile } from "@/data/mockData";
+import { clearSession } from "@/lib/api";
+import { currentUserQueryKey, useCurrentUser } from "@/hooks/use-current-user";
+import { useQueryClient } from "@tanstack/react-query";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean };
 const nav: NavItem[] = [
@@ -33,6 +36,10 @@ const nav: NavItem[] = [
 
 export function LearnerSidebarNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const queryClient = useQueryClient();
+  const { data: user } = useCurrentUser();
+  const name = [user?.first_name, user?.last_name].filter(Boolean).join(" ") || user?.username || "Learner";
+  const initials = name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 
   return (
     <aside className="hidden md:flex fixed inset-y-0 left-0 z-30 w-[260px] flex-col border-r border-sidebar-border gradient-sidebar">
@@ -70,17 +77,20 @@ export function LearnerSidebarNav() {
       <div className="border-t border-sidebar-border p-3">
         <div className="flex items-center gap-3 rounded-lg p-2">
           <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-xs font-bold text-white">
-            {learnerProfile.avatarInitials}
+            {initials}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold">{learnerProfile.name}</div>
+            <div className="truncate text-sm font-semibold">{name}</div>
             <div className="truncate text-[11px] text-muted-foreground">Lvl {learnerProfile.level} · {learnerProfile.xp} XP</div>
           </div>
           <Link
             to="/login"
             aria-label="Log out"
             className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-            // TODO: connect to real auth signout
+            onClick={() => {
+              clearSession();
+              queryClient.removeQueries({ queryKey: currentUserQueryKey });
+            }}
           >
             <LogOut className="h-4 w-4" />
           </Link>

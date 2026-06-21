@@ -2,13 +2,25 @@ import type { ReactNode } from "react";
 import { Bell, Flame, Search } from "lucide-react";
 import { LearnerSidebarNav } from "./LearnerSidebarNav";
 import { learnerProfile } from "@/data/mockData";
+import { useRequireRole } from "@/hooks/use-require-role";
 
-export function LearnerLayout({ title, subtitle, actions, children }: {
+export function LearnerLayout({
+  title,
+  subtitle,
+  actions,
+  children,
+}: {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
   children: ReactNode;
 }) {
+  const { isAuthorized } = useRequireRole("student");
+
+  if (!isAuthorized) {
+    return <div className="min-h-screen bg-background" />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <LearnerSidebarNav />
@@ -27,7 +39,10 @@ export function LearnerLayout({ title, subtitle, actions, children }: {
             <div className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-600">
               <Flame className="h-3.5 w-3.5" /> {learnerProfile.streak}-day streak
             </div>
-            <button className="rounded-md border border-input p-2 hover:bg-accent" aria-label="Notifications">
+            <button
+              className="rounded-md border border-input p-2 hover:bg-accent"
+              aria-label="Notifications"
+            >
               <Bell className="h-4 w-4" />
             </button>
           </div>

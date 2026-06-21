@@ -1,13 +1,25 @@
 import type { ReactNode } from "react";
 import { Bell, Search } from "lucide-react";
 import { SidebarNav } from "./SidebarNav";
+import { useRequireRole } from "@/hooks/use-require-role";
 
-export function TutorLayout({ title, subtitle, actions, children }: {
+export function TutorLayout({
+  title,
+  subtitle,
+  actions,
+  children,
+}: {
   title: string;
   subtitle?: string;
   actions?: ReactNode;
   children: ReactNode;
 }) {
+  const { isAuthorized } = useRequireRole("teacher");
+
+  if (!isAuthorized) {
+    return <div className="min-h-screen bg-background" />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <SidebarNav />
@@ -23,7 +35,10 @@ export function TutorLayout({ title, subtitle, actions, children }: {
           </div>
           <div className="md:hidden text-sm font-semibold">AI Tutor</div>
           <div className="ml-auto flex items-center gap-2">
-            <button className="rounded-md border border-input p-2 hover:bg-accent" aria-label="Notifications">
+            <button
+              className="rounded-md border border-input p-2 hover:bg-accent"
+              aria-label="Notifications"
+            >
               <Bell className="h-4 w-4" />
             </button>
           </div>
