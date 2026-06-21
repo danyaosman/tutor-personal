@@ -14,6 +14,10 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LearnerRouteImport } from './routes/learner'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TutorResourcesRouteImport } from './routes/tutor.resources'
+import { Route as TutorOverviewRouteImport } from './routes/tutor.overview'
+import { Route as TutorDigitalTwinRouteImport } from './routes/tutor.digital-twin'
+import { Route as TutorCoursesRouteImport } from './routes/tutor.courses'
 
 const SelectRoleRoute = SelectRoleRouteImport.update({
   id: '/select-role',
@@ -40,6 +44,26 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TutorResourcesRoute = TutorResourcesRouteImport.update({
+  id: '/tutor/resources',
+  path: '/tutor/resources',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TutorOverviewRoute = TutorOverviewRouteImport.update({
+  id: '/tutor/overview',
+  path: '/tutor/overview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TutorDigitalTwinRoute = TutorDigitalTwinRouteImport.update({
+  id: '/tutor/digital-twin',
+  path: '/tutor/digital-twin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TutorCoursesRoute = TutorCoursesRouteImport.update({
+  id: '/tutor/courses',
+  path: '/tutor/courses',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +71,10 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/select-role': typeof SelectRoleRoute
+  '/tutor/courses': typeof TutorCoursesRoute
+  '/tutor/digital-twin': typeof TutorDigitalTwinRoute
+  '/tutor/overview': typeof TutorOverviewRoute
+  '/tutor/resources': typeof TutorResourcesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +82,10 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/select-role': typeof SelectRoleRoute
+  '/tutor/courses': typeof TutorCoursesRoute
+  '/tutor/digital-twin': typeof TutorDigitalTwinRoute
+  '/tutor/overview': typeof TutorOverviewRoute
+  '/tutor/resources': typeof TutorResourcesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +94,45 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/select-role': typeof SelectRoleRoute
+  '/tutor/courses': typeof TutorCoursesRoute
+  '/tutor/digital-twin': typeof TutorDigitalTwinRoute
+  '/tutor/overview': typeof TutorOverviewRoute
+  '/tutor/resources': typeof TutorResourcesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/learner' | '/login' | '/register' | '/select-role'
+  fullPaths:
+    | '/'
+    | '/learner'
+    | '/login'
+    | '/register'
+    | '/select-role'
+    | '/tutor/courses'
+    | '/tutor/digital-twin'
+    | '/tutor/overview'
+    | '/tutor/resources'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/learner' | '/login' | '/register' | '/select-role'
-  id: '__root__' | '/' | '/learner' | '/login' | '/register' | '/select-role'
+  to:
+    | '/'
+    | '/learner'
+    | '/login'
+    | '/register'
+    | '/select-role'
+    | '/tutor/courses'
+    | '/tutor/digital-twin'
+    | '/tutor/overview'
+    | '/tutor/resources'
+  id:
+    | '__root__'
+    | '/'
+    | '/learner'
+    | '/login'
+    | '/register'
+    | '/select-role'
+    | '/tutor/courses'
+    | '/tutor/digital-twin'
+    | '/tutor/overview'
+    | '/tutor/resources'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +141,10 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   SelectRoleRoute: typeof SelectRoleRoute
+  TutorCoursesRoute: typeof TutorCoursesRoute
+  TutorDigitalTwinRoute: typeof TutorDigitalTwinRoute
+  TutorOverviewRoute: typeof TutorOverviewRoute
+  TutorResourcesRoute: typeof TutorResourcesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,6 +184,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tutor/resources': {
+      id: '/tutor/resources'
+      path: '/tutor/resources'
+      fullPath: '/tutor/resources'
+      preLoaderRoute: typeof TutorResourcesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tutor/overview': {
+      id: '/tutor/overview'
+      path: '/tutor/overview'
+      fullPath: '/tutor/overview'
+      preLoaderRoute: typeof TutorOverviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tutor/digital-twin': {
+      id: '/tutor/digital-twin'
+      path: '/tutor/digital-twin'
+      fullPath: '/tutor/digital-twin'
+      preLoaderRoute: typeof TutorDigitalTwinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tutor/courses': {
+      id: '/tutor/courses'
+      path: '/tutor/courses'
+      fullPath: '/tutor/courses'
+      preLoaderRoute: typeof TutorCoursesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -125,6 +221,10 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   SelectRoleRoute: SelectRoleRoute,
+  TutorCoursesRoute: TutorCoursesRoute,
+  TutorDigitalTwinRoute: TutorDigitalTwinRoute,
+  TutorOverviewRoute: TutorOverviewRoute,
+  TutorResourcesRoute: TutorResourcesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

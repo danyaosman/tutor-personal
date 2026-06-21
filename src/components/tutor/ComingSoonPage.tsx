@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { TutorLayout } from "@/components/tutor/TutorLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles } from "lucide-react";
@@ -20,8 +19,3 @@ export function ComingSoonPage({ title, subtitle, description }: Props) {
     </TutorLayout>
   );
 }
-
-// Helper to register simple placeholder routes
-export const Route = createFileRoute("/tutor/_placeholder")({
-  component: () => null,
-});
