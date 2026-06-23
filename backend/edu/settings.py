@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR / ".env", override=True)
 
 
 # Quick-start development settings - unsuitable for production
@@ -51,6 +51,14 @@ CORS_ALLOWED_ORIGINS = [
     ).split(",")
     if origin.strip()
 ]
+
+AI_PROVIDER = os.getenv("AI_PROVIDER", "openrouter")
+AI_API_KEY = os.getenv("AI_API_KEY", "")
+AI_BASE_URL = os.getenv("AI_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
+AI_MODEL = os.getenv("AI_MODEL", "openrouter/auto")
+AI_REQUEST_TIMEOUT = int(os.getenv("AI_REQUEST_TIMEOUT", "30"))
+AI_SITE_URL = os.getenv("AI_SITE_URL", "http://localhost:5173")
+AI_APP_NAME = os.getenv("AI_APP_NAME", "EduMind")
 
 
 # Application definition

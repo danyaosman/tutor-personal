@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Course, CourseResource
+from .models import ClassroomEnrollment, Course, CourseResource
 
 
 class CourseSerializer(serializers.ModelSerializer):
@@ -37,6 +37,22 @@ class CourseSerializer(serializers.ModelSerializer):
         return normalized_value
 
 
+class LearnerCourseSerializer(CourseSerializer):
+    is_enrolled = serializers.SerializerMethodField()
+
+    class Meta(CourseSerializer.Meta):
+        fields = CourseSerializer.Meta.fields + ["is_enrolled"]
+
+    def get_is_enrolled(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        return ClassroomEnrollment.objects.filter(
+            student=request.user,
+            classroom__course=obj,
+        ).exists()
+
+
 class CourseResourceSerializer(serializers.ModelSerializer):
     class Meta:
         model = CourseResource
@@ -51,11 +67,19 @@ class CourseResourceSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id",
-            "file_name",
             "file_size",
             "processing_status",
             "created_at",
         ]
+        extra_kwargs = {
+            "file_name": {"required": False},
+        }
+
+    def validate_file_name(self, value):
+        normalized_value = value.strip()
+        if not normalized_value:
+            raise serializers.ValidationError("File name cannot be empty.")
+        return normalized_value
 
     def validate_file(self, value):
         if not value.name.lower().endswith(".pdf"):

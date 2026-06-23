@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { ArrowRight, BookOpen, FolderOpen, Plus, Users } from "lucide-react";
 import { TutorLayout } from "@/components/tutor/TutorLayout";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -41,6 +41,17 @@ const statusStyles: Record<CourseStatus, string> = {
 };
 
 function CoursesPage() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const normalizedPathname = pathname.replace(/\/$/, "");
+
+  if (normalizedPathname !== "/tutor/courses") {
+    return <Outlet />;
+  }
+
+  return <CourseListPage />;
+}
+
+function CourseListPage() {
   const [open, setOpen] = useState(false);
   const [courseStatus, setCourseStatus] = useState<CourseStatus>("draft");
   const queryClient = useQueryClient();

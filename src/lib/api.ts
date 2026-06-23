@@ -143,6 +143,10 @@ export interface Course {
   created_at: string;
 }
 
+export interface LearnerCourse extends Course {
+  is_enrolled: boolean;
+}
+
 export interface CreateCourseInput {
   title: string;
   description: string;
@@ -150,6 +154,8 @@ export interface CreateCourseInput {
   grade_level: string;
   status: CourseStatus;
 }
+
+export type UpdateCourseInput = Partial<CreateCourseInput>;
 
 export interface CourseResource {
   id: number;
@@ -159,6 +165,26 @@ export interface CourseResource {
   is_style_example: boolean;
   processing_status: "uploaded" | "processing" | "completed" | "failed";
   created_at: string;
+}
+
+export interface UpdateCourseResourceInput {
+  file_name?: string;
+  is_style_example?: boolean;
+}
+
+export interface CourseChatSource {
+  resource_id: number;
+  file_name: string;
+  page_number: number | null;
+  chunk_index: number;
+  preview: string;
+}
+
+export interface CourseChatResponse {
+  session_id: number;
+  message: string;
+  answer: string;
+  sources: CourseChatSource[];
 }
 
 export async function login(username: string, password: string) {
@@ -196,8 +222,51 @@ export function getCourse(courseId: number) {
   return apiRequest<Course>(`/api/courses/${courseId}/`);
 }
 
+export function updateCourse(courseId: number, input: UpdateCourseInput) {
+  return apiRequest<Course>(`/api/courses/${courseId}/`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listAvailableCourses() {
+  return apiRequest<LearnerCourse[]>("/api/courses/available/");
+}
+
+export function listEnrolledCourses() {
+  return apiRequest<LearnerCourse[]>("/api/courses/enrolled/");
+}
+
+export function enrollInCourse(courseId: number) {
+  return apiRequest<LearnerCourse>(`/api/courses/${courseId}/enroll/`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
 export function listCourseResources(courseId: number) {
   return apiRequest<CourseResource[]>(`/api/courses/${courseId}/resources/`);
+}
+
+export function listLearnerCourseResources(courseId: number) {
+  return apiRequest<CourseResource[]>(`/api/courses/${courseId}/learner-resources/`);
+}
+
+export function updateCourseResource(
+  courseId: number,
+  resourceId: number,
+  input: UpdateCourseResourceInput,
+) {
+  return apiRequest<CourseResource>(`/api/courses/${courseId}/resources/${resourceId}/`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteCourseResource(courseId: number, resourceId: number) {
+  return apiRequest<void>(`/api/courses/${courseId}/resources/${resourceId}/`, {
+    method: "DELETE",
+  });
 }
 
 export function uploadCourseResource(courseId: number, file: File) {
@@ -206,6 +275,18 @@ export function uploadCourseResource(courseId: number, file: File) {
   return apiRequest<CourseResource>(`/api/courses/${courseId}/resources/`, {
     method: "POST",
     body,
+  });
+}
+
+export function resolveFileUrl(fileUrl: string) {
+  if (/^https?:\/\//i.test(fileUrl)) return fileUrl;
+  return `${API_URL}${fileUrl.startsWith("/") ? "" : "/"}${fileUrl}`;
+}
+
+export function chatWithCourse(courseId: number, message: string) {
+  return apiRequest<CourseChatResponse>(`/api/ai/courses/${courseId}/chat/`, {
+    method: "POST",
+    body: JSON.stringify({ message }),
   });
 }
 
