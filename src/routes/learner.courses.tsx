@@ -1,79 +1,96 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { LearnerLayout } from "@/components/learner/LearnerLayout";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { enrolledCourses } from "@/data/mockData";
-import { BookOpen, Play, Search } from "lucide-react";
+import { useState } from "react";
+import { edCourses } from "../data/mockData";
 
 export const Route = createFileRoute("/learner/courses")({
-  head: () => ({ meta: [{ title: "My Courses — AI Tutor" }] }),
-  component: LearnerCourses,
+  component: LearnerCoursesPage,
 });
 
-const statusTone: Record<string, string> = {
-  "In Progress": "bg-blue-500/10 text-blue-600",
-  "Almost Done": "bg-amber-500/10 text-amber-600",
-  "Completed": "bg-emerald-500/10 text-emerald-600",
-};
+function LearnerCoursesPage() {
+  const [search, setSearch] = useState("");
 
-function LearnerCourses() {
+  const filteredCourses = edCourses.filter((course) => {
+    const content = `${course.name} ${course.subject} ${course.grade} ${course.tutorName}`;
+    return content.toLowerCase().includes(search.toLowerCase());
+  });
+
   return (
-    <LearnerLayout
-      title="My Courses"
-      subtitle="Pick up where you left off, or browse the catalog."
-      actions={
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button className="gradient-ai text-white shadow-glow"><Search className="h-4 w-4" /> Browse Catalog</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Browse the catalog</DialogTitle></DialogHeader>
-            <p className="text-sm text-muted-foreground">
-              The full course catalog isn't wired up yet. {/* TODO: connect to backend API */}
+    <main className="em-app-page">
+      <div className="em-bg-orb em-orb-one" />
+      <div className="em-bg-orb em-orb-two" />
+
+      <section className="em-app-shell">
+        <nav className="em-app-nav">
+          <Link to="/" className="em-app-logo">
+            EduMind
+          </Link>
+
+          <div>
+            <Link to="/learner">Dashboard</Link>
+            <Link to="/learner/ask">Ask AI</Link>
+            <Link to="/learner/quizzes">Quiz</Link>
+            <Link to="/">Logout</Link>
+          </div>
+        </nav>
+
+        <header className="em-dashboard-hero">
+          <div>
+            <span>Course Library</span>
+            <h1>Find a course and start learning</h1>
+            <p>
+              Browse available courses, join the right learning space, and study
+              with the tutor’s Digital Twin.
             </p>
-            <DialogFooter><Button variant="outline">Close</Button></DialogFooter>
-          </DialogContent>
-        </Dialog>
-      }
-    >
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {enrolledCourses.map((c) => (
-          <Card key={c.id} className="overflow-hidden border-border/60 shadow-soft transition hover:shadow-glow/40">
-            <div className="h-2 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500" />
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="text-base font-bold leading-tight">{c.title}</h3>
-                <Badge variant="secondary" className={statusTone[c.status]}>{c.status}</Badge>
-              </div>
-              <div className="mt-1 text-xs text-muted-foreground">with {c.tutor}</div>
+          </div>
+        </header>
 
-              <div className="mt-4">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">{c.completed} / {c.lessons} lessons</span>
-                  <span className="font-semibold">{c.progress}%</span>
+        <section className="em-panel em-course-library">
+          <div className="em-panel-head em-search-head">
+            <div>
+              <span>Available Courses</span>
+              <h2>Choose your course</h2>
+            </div>
+
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search courses..."
+              className="em-search-input"
+            />
+          </div>
+
+          <div className="em-library-grid">
+            {filteredCourses.map((course) => (
+              <article key={course.id} className="em-course-card em-library-card">
+                <div className="em-card-topline">
+                  <span>{course.subject}</span>
+                  <small>{course.grade}</small>
                 </div>
-                <Progress value={c.progress} className="mt-2 h-2" />
-              </div>
 
-              <div className="mt-4 rounded-lg bg-secondary/50 p-3 text-xs">
-                <span className="text-muted-foreground">Up next: </span>
-                <span className="font-semibold">{c.nextModule}</span>
-              </div>
+                <h3>{course.name}</h3>
 
-              <div className="mt-4 flex gap-2">
-                {/* TODO: route to lesson player */}
-                <Button className="flex-1 gradient-ai text-white shadow-glow"><Play className="h-4 w-4" /> Continue</Button>
-                <Button variant="outline" asChild>
-                  <Link to="/learner/resources"><BookOpen className="h-4 w-4" /></Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </LearnerLayout>
+                <p>{course.description}</p>
+
+                <div className="em-pill-row">
+                  <span>{course.tutorName}</span>
+                  <span>{course.learners} learners</span>
+                  <span>{course.averageScore}% avg</span>
+                </div>
+
+                <div className="em-learner-actions">
+                  <Link to="/learner/ask" className="em-btn em-btn-primary">
+                    Join / Open
+                  </Link>
+
+                  <Link to="/learner/quizzes" className="em-btn em-btn-soft">
+                    Take Quiz
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      </section>
+    </main>
   );
 }

@@ -1,72 +1,121 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { GraduationCap, BookOpenCheck, ArrowRight, Sparkles } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import {
+  EduFooter,
+  LanguageToggle,
+  PageLoader,
+  useEduLang,
+} from "../lib/edumindUi";
 
 export const Route = createFileRoute("/select-role")({
-  component: SelectRole,
+  component: SelectRolePage,
 });
 
-function SelectRole() {
-  return (
-    <div className="relative min-h-screen overflow-hidden bg-background">
-      <div className="pointer-events-none absolute inset-0 gradient-ai-soft opacity-70" />
-      <div className="pointer-events-none absolute -top-40 -left-40 h-96 w-96 rounded-full gradient-ai opacity-30 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-40 -right-40 h-96 w-96 rounded-full gradient-ai opacity-20 blur-3xl" />
+function SelectRolePage() {
+  const navigate = useNavigate();
+  const { lang, setLang, dir, isArabic } = useEduLang();
+  const [loading, setLoading] = useState(false);
 
-      <div className="relative mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-4 py-10">
-        <Link to="/" className="mb-8 flex items-center gap-2">
-          <div className="grid h-10 w-10 place-items-center rounded-xl gradient-ai shadow-glow">
-            <Sparkles className="h-5 w-5 text-white" />
+  function goRegister(role: "tutor" | "learner") {
+    setLoading(true);
+
+    setTimeout(() => {
+      navigate({
+        to: "/register",
+        search: { role },
+      });
+    }, 650);
+  }
+
+  const text = {
+    login: isArabic ? "تسجيل الدخول" : "Login",
+    eyebrow: isArabic ? "اختر مساحتك" : "Choose your space",
+    title: isArabic
+      ? "كيف تريد استخدام EduMind؟"
+      : "How do you want to use EduMind?",
+    desc: isArabic
+      ? "اختر دورك لتبدأ الرحلة المناسبة. المدرّس ينشئ توأمه الرقمي، والمتعلم ينضم للكورسات ويتطور بمساعدة الذكاء الاصطناعي."
+      : "Select your role to start the right learning journey. Tutors build Digital Twins, while learners join courses and improve with AI help.",
+    tutorWorkspace: isArabic ? "مساحة المدرّس" : "Tutor Workspace",
+    tutorTitle: isArabic ? "أنشئ توأمك الرقمي" : "Create your Digital Twin",
+    tutorDesc: isArabic
+      ? "ارفع المصادر، أضف تعليمات الشرح، أنشئ الكورسات، وتابع نقاط ضعف المتعلمين."
+      : "Upload resources, add teaching instructions, create courses, and track learners’ weak topics.",
+    tutorContinue: isArabic ? "المتابعة كمدرّس ←" : "Continue as Tutor →",
+    learnerSpace: isArabic ? "مساحة المتعلم" : "Learner Space",
+    learnerTitle: isArabic ? "تعلّم بدعم ذكي" : "Learn with AI support",
+    learnerDesc: isArabic
+      ? "انضم للكورسات، اسأل المدرّس الذكي، حل الاختبارات، واعرف ماذا تحتاج أن تحسّن."
+      : "Join courses, ask the AI Tutor questions, take quizzes, and discover what to improve.",
+    learnerContinue: isArabic ? "المتابعة كمتعلم ←" : "Continue as Learner →",
+  };
+
+  return (
+    <main className="em-auth-page" dir={dir}>
+      {loading && <PageLoader />}
+
+      <div className="em-bg-orb em-orb-one" />
+      <div className="em-bg-orb em-orb-two" />
+
+      <section className="em-auth-shell">
+        <nav className="em-auth-nav">
+          <Link to="/" className="em-auth-logo">
+            EduMind
+          </Link>
+
+          <div className="em-auth-nav-actions">
+            <LanguageToggle lang={lang} setLang={setLang} />
+
+            <Link to="/login" className="em-auth-nav-link">
+              {text.login}
+            </Link>
           </div>
-          <span className="text-xl font-extrabold tracking-tight">AI Tutor</span>
-        </Link>
+        </nav>
 
-        <h1 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">How will you use AI Tutor?</h1>
-        <p className="mt-3 max-w-xl text-center text-muted-foreground">Choose the experience that fits you. You can switch later.</p>
+        <div className="em-role-heading em-page-enter">
+          <span>{text.eyebrow}</span>
 
-        <div className="mt-10 grid w-full gap-5 sm:grid-cols-2">
-          <RoleCard
-            to="/tutor/overview"
-            icon={<GraduationCap className="h-7 w-7" />}
-            title="I'm a Tutor"
-            description="Build your AI teaching twin, manage courses, quizzes, and analyze student progress."
-            cta="Enter tutor workspace"
-          />
-          <RoleCard
-            to="/learner"
-            icon={<BookOpenCheck className="h-7 w-7" />}
-            title="I'm a Learner"
-            description="Learn from AI tutors trained by your teachers — personalized, on your schedule."
-            cta="Go to learner space"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
+          <h1>{text.title}</h1>
 
-function RoleCard({ to, icon, title, description, cta }: {
-  to: string;
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  cta: string;
-}) {
-  return (
-    <Link
-      to={to}
-      className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card/80 p-7 shadow-soft backdrop-blur-md transition hover:-translate-y-1 hover:shadow-glow"
-    >
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-cyan-500/10 opacity-0 transition group-hover:opacity-100" />
-      <div className="relative">
-        <div className="grid h-14 w-14 place-items-center rounded-2xl gradient-ai text-white shadow-glow">
-          {icon}
+          <p>{text.desc}</p>
         </div>
-        <h3 className="mt-5 text-xl font-bold tracking-tight">{title}</h3>
-        <p className="mt-2 text-sm text-muted-foreground">{description}</p>
-        <div className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
-          {cta} <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+
+        <div className="em-role-select-grid">
+          <button
+            type="button"
+            onClick={() => goRegister("tutor")}
+            className="em-choice-card em-choice-tutor em-choice-button"
+          >
+            <div className="em-choice-icon">T</div>
+
+            <div>
+              <span>{text.tutorWorkspace}</span>
+              <h2>{text.tutorTitle}</h2>
+              <p>{text.tutorDesc}</p>
+            </div>
+
+            <strong>{text.tutorContinue}</strong>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => goRegister("learner")}
+            className="em-choice-card em-choice-learner em-choice-button"
+          >
+            <div className="em-choice-icon">L</div>
+
+            <div>
+              <span>{text.learnerSpace}</span>
+              <h2>{text.learnerTitle}</h2>
+              <p>{text.learnerDesc}</p>
+            </div>
+
+            <strong>{text.learnerContinue}</strong>
+          </button>
         </div>
-      </div>
-    </Link>
+
+        <EduFooter lang={lang} />
+      </section>
+    </main>
   );
 }

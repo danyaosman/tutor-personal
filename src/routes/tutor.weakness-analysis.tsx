@@ -1,120 +1,133 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { TutorLayout } from "@/components/tutor/TutorLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { weaknessTopics, topWeakTopics } from "@/data/mockData";
-import { AlertTriangle, Brain, Sparkles } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { edLearnerResults } from "../data/mockData";
 
 export const Route = createFileRoute("/tutor/weakness-analysis")({
-  head: () => ({ meta: [{ title: "Weakness Analysis — AI Tutor" }] }),
-  component: WeaknessPage,
+  component: TutorWeaknessAnalysisPage,
 });
 
-// Lower score = bigger weakness. Map 0–100 to a red intensity.
-function heatStyle(score: number) {
-  const weakness = 100 - score; // 0..100
-  const opacity = Math.min(1, weakness / 70).toFixed(2);
-  return {
-    backgroundColor: `oklch(0.7 0.18 25 / ${opacity})`,
-  };
-}
+function TutorWeaknessAnalysisPage() {
+  const commonWeakTopics = [
+    "Normalization",
+    "ERD",
+    "SQL Joins",
+    "Photosynthesis",
+  ];
 
-function WeaknessPage() {
   return (
-    <TutorLayout
-      title="Weakness Analysis"
-      subtitle="AI-detected gaps in understanding across topics and difficulty levels."
-      actions={
-        // TODO: connect to AI model
-        <Button variant="outline" className="border-primary/30">
-          <Sparkles className="h-4 w-4" /> Re-run AI analysis
-        </Button>
-      }
-    >
-      <Card className="shadow-soft">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Brain className="h-5 w-5 text-primary" />
-            <CardTitle>Topic × Difficulty Heatmap</CardTitle>
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Average mastery score. Darker red = larger knowledge gap.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <div className="min-w-[520px]">
-              <div className="grid grid-cols-[160px_1fr_1fr_1fr] gap-2 text-xs font-semibold text-muted-foreground">
-                <div />
-                <div className="text-center">Beginner</div>
-                <div className="text-center">Intermediate</div>
-                <div className="text-center">Advanced</div>
-              </div>
-              <div className="mt-2 space-y-2">
-                {weaknessTopics.map((t) => (
-                  <div key={t.topic} className="grid grid-cols-[160px_1fr_1fr_1fr] gap-2">
-                    <div className="flex items-center text-sm font-medium">{t.topic}</div>
-                    {([t.beginner, t.intermediate, t.advanced] as const).map((score, i) => (
-                      <div
-                        key={i}
-                        className="grid h-12 place-items-center rounded-lg border border-border/40 text-sm font-bold"
-                        style={heatStyle(score)}
-                      >
-                        {score}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <main className="em-app-page">
+      <div className="em-bg-orb em-orb-one" />
+      <div className="em-bg-orb em-orb-two" />
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2 shadow-soft">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              <CardTitle>Top 5 Weak Topics</CardTitle>
-            </div>
-            <Badge variant="secondary" className="bg-amber-500/10 text-amber-600">Action needed</Badge>
-          </CardHeader>
-          <CardContent className="divide-y divide-border">
-            {topWeakTopics.map((t, i) => (
-              <div key={t.topic} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                <div className="flex items-center gap-3">
-                  <span className="grid h-8 w-8 place-items-center rounded-md bg-rose-500/10 text-sm font-bold text-rose-600">
-                    {i + 1}
-                  </span>
-                  <div>
-                    <div className="text-sm font-semibold">{t.topic}</div>
-                    <div className="text-xs text-muted-foreground">{t.affected} students affected</div>
-                  </div>
-                </div>
-                {/* TODO: connect to AI model */}
-                <Button size="sm" variant="outline">{t.action}</Button>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+      <section className="em-app-shell">
+        <nav className="em-app-nav">
+          <Link to="/" className="em-app-logo">
+            EduMind
+          </Link>
 
-        <Card className="relative overflow-hidden shadow-soft">
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 to-cyan-500/10" />
-          <CardHeader className="relative"><CardTitle>Per-Student Drilldown</CardTitle></CardHeader>
-          <CardContent className="relative space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Sofia Müller shows consistent gaps in <strong>Backpropagation</strong> and{" "}
-              <strong>Probability</strong>. The AI suggests a 20-minute focused review session.
+          <div>
+            <Link to="/tutor/overview">Dashboard</Link>
+            <Link to="/tutor/digital-twin">Create Course</Link>
+            <Link to="/">Logout</Link>
+          </div>
+        </nav>
+
+        <header className="em-dashboard-hero">
+          <div>
+            <span>Weakness Analysis</span>
+            <h1>Understand where learners struggle</h1>
+            <p>
+              Review quiz results, weak topics, and learner performance across
+              your courses.
             </p>
-            {/* TODO: connect to AI model */}
-            <Button className="w-full gradient-ai text-white">
-              <Sparkles className="h-4 w-4" /> Generate plan
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    </TutorLayout>
+          </div>
+        </header>
+
+        <section className="em-dashboard-grid">
+          <div className="em-panel">
+            <div className="em-panel-head">
+              <div>
+                <span>Course Insights</span>
+                <h2>Common Weak Topics</h2>
+              </div>
+            </div>
+
+            <div className="em-topic-cloud">
+              {commonWeakTopics.map((topic) => (
+                <span key={topic}>{topic}</span>
+              ))}
+            </div>
+          </div>
+
+          <div className="em-panel">
+            <div className="em-panel-head">
+              <div>
+                <span>Summary</span>
+                <h2>Performance Snapshot</h2>
+              </div>
+            </div>
+
+            <div className="em-mini-stat-row">
+              <div>
+                <strong>{edLearnerResults.length}</strong>
+                <span>Recent Results</span>
+              </div>
+
+              <div>
+                <strong>55%</strong>
+                <span>Lowest Score</span>
+              </div>
+
+              <div>
+                <strong>4</strong>
+                <span>Weak Topics</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="em-panel em-table-panel">
+          <div className="em-panel-head">
+            <div>
+              <span>Learner Tracking</span>
+              <h2>Recent Learner Quiz Results</h2>
+            </div>
+          </div>
+
+          <div className="em-table-wrapper">
+            <table className="em-table-premium">
+              <thead>
+                <tr>
+                  <th>Learner</th>
+                  <th>Course</th>
+                  <th>Score</th>
+                  <th>Weak Topics</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {edLearnerResults.map((result) => (
+                  <tr key={result.id}>
+                    <td>{result.learnerName}</td>
+                    <td>{result.course}</td>
+                    <td>
+                      <strong>{result.score}%</strong>
+                    </td>
+                    <td>
+                      <div className="em-table-pills">
+                        {result.weakTopics.map((topic) => (
+                          <span key={topic}>{topic}</span>
+                        ))}
+                      </div>
+                    </td>
+                    <td>{result.date}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
   );
 }

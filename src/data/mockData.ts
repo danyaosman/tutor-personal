@@ -403,3 +403,147 @@ export const learnerPreferenceDefaults = {
   voiceReplies: false,
   showAiSuggestions: true,
 };
+
+
+// EduMind UI mock data
+
+export type EdCourse = {
+  id: number;
+  name: string;
+  subject: string;
+  grade: string;
+  tutorName: string;
+  description: string;
+  learningGoals: string[];
+  resource: string;
+  learners: number;
+  averageScore: number;
+};
+
+export type EdQuizQuestion = {
+  id: number;
+  topic: string;
+  question: string;
+  options: string[];
+  correctAnswer: string;
+  explanation: string;
+};
+
+export type EdLearnerResult = {
+  id: number;
+  learnerName: string;
+  course: string;
+  score: number;
+  weakTopics: string[];
+  date: string;
+};
+
+export const edCourses: EdCourse[] = [
+  {
+    id: 1,
+    name: "Database Systems",
+    subject: "Computer Science",
+    grade: "University Year 3",
+    tutorName: "Dr. Ahmad Khaled",
+    description:
+      "Learn ERD, relational models, SQL basics, and normalization using simple examples.",
+    learningGoals: [
+      "Understand ERD components",
+      "Convert ERD to relational schema",
+      "Apply normalization rules",
+      "Practice database design questions",
+    ],
+    resource: "database_normalization.pdf",
+    learners: 24,
+    averageScore: 76,
+  },
+  {
+    id: 2,
+    name: "Introduction to Biology",
+    subject: "Biology",
+    grade: "Grade 10",
+    tutorName: "Ms. Lina Omar",
+    description:
+      "Understand cell structure, photosynthesis, and basic biology concepts with clear explanations.",
+    learningGoals: [
+      "Understand cell structure",
+      "Explain photosynthesis",
+      "Recognize weak topics through quizzes",
+    ],
+    resource: "biology_chapter_1.pdf",
+    learners: 18,
+    averageScore: 81,
+  },
+];
+
+export const edQuizQuestions: EdQuizQuestion[] = [
+  {
+    id: 1,
+    topic: "Normalization",
+    question: "What is the main goal of normalization?",
+    options: [
+      "To duplicate data",
+      "To reduce redundancy",
+      "To delete all tables",
+      "To make queries slower",
+    ],
+    correctAnswer: "To reduce redundancy",
+    explanation:
+      "Normalization organizes data into related tables and reduces repeated data.",
+  },
+  {
+    id: 2,
+    topic: "ERD",
+    question: "What does an entity represent in an ERD?",
+    options: [
+      "A real-world object",
+      "Only a number",
+      "A password",
+      "A color",
+    ],
+    correctAnswer: "A real-world object",
+    explanation:
+      "An entity represents something real in the system, such as Student, Course, or Tutor.",
+  },
+  {
+    id: 3,
+    topic: "Relational Model",
+    question: "What is a primary key used for?",
+    options: [
+      "To identify each row uniquely",
+      "To create colors",
+      "To delete a database",
+      "To store images only",
+    ],
+    correctAnswer: "To identify each row uniquely",
+    explanation:
+      "A primary key uniquely identifies every record in a table.",
+  },
+];
+
+export const edLearnerResults: EdLearnerResult[] = [
+  {
+    id: 1,
+    learnerName: "Sara Ali",
+    course: "Database Systems",
+    score: 60,
+    weakTopics: ["Normalization", "ERD"],
+    date: "Today",
+  },
+  {
+    id: 2,
+    learnerName: "Omar Hassan",
+    course: "Database Systems",
+    score: 72,
+    weakTopics: ["SQL Joins"],
+    date: "Yesterday",
+  },
+  {
+    id: 3,
+    learnerName: "Maya Noor",
+    course: "Introduction to Biology",
+    score: 55,
+    weakTopics: ["Photosynthesis", "Cell Structure"],
+    date: "2 days ago",
+  },
+];
