@@ -73,10 +73,17 @@ async function refreshAccessToken() {
   return tokens.access;
 }
 
-export async function apiRequest<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
+export async function apiRequest<T>(
+  path: string,
+  init: RequestInit = {},
+  retry = true,
+): Promise<T> {
   const headers = new Headers(init.headers);
   const access = storage()?.getItem(ACCESS_TOKEN_KEY);
-  if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  const isFormData = typeof FormData !== "undefined" && init.body instanceof FormData;
+  if (init.body && !isFormData && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
   if (access) headers.set("Authorization", `Bearer ${access}`);
 
   const response = await fetch(`${API_URL}${path}`, { ...init, headers });
@@ -121,6 +128,39 @@ export interface RegisterInput {
   role: UserRole;
 }
 
+export type CourseStatus = "draft" | "active" | "archived";
+
+export interface Course {
+  id: number;
+  title: string;
+  description: string;
+  subject: string;
+  grade_level: string;
+  status: CourseStatus;
+  teacher_name: string;
+  student_count: number;
+  resource_count: number;
+  created_at: string;
+}
+
+export interface CreateCourseInput {
+  title: string;
+  description: string;
+  subject: string;
+  grade_level: string;
+  status: CourseStatus;
+}
+
+export interface CourseResource {
+  id: number;
+  file_name: string;
+  file: string;
+  file_size: number;
+  is_style_example: boolean;
+  processing_status: "uploaded" | "processing" | "completed" | "failed";
+  created_at: string;
+}
+
 export async function login(username: string, password: string) {
   const tokens = await apiRequest<AuthTokens>("/api/auth/login/", {
     method: "POST",
@@ -139,6 +179,34 @@ export function register(input: RegisterInput) {
 
 export function getCurrentUser() {
   return apiRequest<AuthUser>("/api/auth/me/");
+}
+
+export function listCourses() {
+  return apiRequest<Course[]>("/api/courses/");
+}
+
+export function createCourse(input: CreateCourseInput) {
+  return apiRequest<Course>("/api/courses/", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getCourse(courseId: number) {
+  return apiRequest<Course>(`/api/courses/${courseId}/`);
+}
+
+export function listCourseResources(courseId: number) {
+  return apiRequest<CourseResource[]>(`/api/courses/${courseId}/resources/`);
+}
+
+export function uploadCourseResource(courseId: number, file: File) {
+  const body = new FormData();
+  body.append("file", file);
+  return apiRequest<CourseResource>(`/api/courses/${courseId}/resources/`, {
+    method: "POST",
+    body,
+  });
 }
 
 export function getRoleHome(role: UserRole) {

@@ -36,6 +36,7 @@ import { Route as LearnerProgressRouteImport } from './routes/learner.progress'
 import { Route as LearnerCoursesRouteImport } from './routes/learner.courses'
 import { Route as LearnerAssignmentsRouteImport } from './routes/learner.assignments'
 import { Route as LearnerAskRouteImport } from './routes/learner.ask'
+import { Route as TutorCoursesCourseIdRouteImport } from './routes/tutor.courses.$courseId'
 
 const SelectRoleRoute = SelectRoleRouteImport.update({
   id: '/select-role',
@@ -172,6 +173,11 @@ const LearnerAskRoute = LearnerAskRouteImport.update({
   path: '/ask',
   getParentRoute: () => LearnerRoute,
 } as any)
+const TutorCoursesCourseIdRoute = TutorCoursesCourseIdRouteImport.update({
+  id: '/$courseId',
+  path: '/$courseId',
+  getParentRoute: () => TutorCoursesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -191,7 +197,7 @@ export interface FileRoutesByFullPath {
   '/learner/weaknesses': typeof LearnerWeaknessesRoute
   '/tutor/analytics': typeof TutorAnalyticsRoute
   '/tutor/assignments': typeof TutorAssignmentsRoute
-  '/tutor/courses': typeof TutorCoursesRoute
+  '/tutor/courses': typeof TutorCoursesRouteWithChildren
   '/tutor/digital-twin': typeof TutorDigitalTwinRoute
   '/tutor/overview': typeof TutorOverviewRoute
   '/tutor/quizzes': typeof TutorQuizzesRoute
@@ -201,6 +207,7 @@ export interface FileRoutesByFullPath {
   '/tutor/syllabus': typeof TutorSyllabusRoute
   '/tutor/weakness-analysis': typeof TutorWeaknessAnalysisRoute
   '/learner/': typeof LearnerIndexRoute
+  '/tutor/courses/$courseId': typeof TutorCoursesCourseIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -219,7 +226,7 @@ export interface FileRoutesByTo {
   '/learner/weaknesses': typeof LearnerWeaknessesRoute
   '/tutor/analytics': typeof TutorAnalyticsRoute
   '/tutor/assignments': typeof TutorAssignmentsRoute
-  '/tutor/courses': typeof TutorCoursesRoute
+  '/tutor/courses': typeof TutorCoursesRouteWithChildren
   '/tutor/digital-twin': typeof TutorDigitalTwinRoute
   '/tutor/overview': typeof TutorOverviewRoute
   '/tutor/quizzes': typeof TutorQuizzesRoute
@@ -229,6 +236,7 @@ export interface FileRoutesByTo {
   '/tutor/syllabus': typeof TutorSyllabusRoute
   '/tutor/weakness-analysis': typeof TutorWeaknessAnalysisRoute
   '/learner': typeof LearnerIndexRoute
+  '/tutor/courses/$courseId': typeof TutorCoursesCourseIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -249,7 +257,7 @@ export interface FileRoutesById {
   '/learner/weaknesses': typeof LearnerWeaknessesRoute
   '/tutor/analytics': typeof TutorAnalyticsRoute
   '/tutor/assignments': typeof TutorAssignmentsRoute
-  '/tutor/courses': typeof TutorCoursesRoute
+  '/tutor/courses': typeof TutorCoursesRouteWithChildren
   '/tutor/digital-twin': typeof TutorDigitalTwinRoute
   '/tutor/overview': typeof TutorOverviewRoute
   '/tutor/quizzes': typeof TutorQuizzesRoute
@@ -259,6 +267,7 @@ export interface FileRoutesById {
   '/tutor/syllabus': typeof TutorSyllabusRoute
   '/tutor/weakness-analysis': typeof TutorWeaknessAnalysisRoute
   '/learner/': typeof LearnerIndexRoute
+  '/tutor/courses/$courseId': typeof TutorCoursesCourseIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -290,6 +299,7 @@ export interface FileRouteTypes {
     | '/tutor/syllabus'
     | '/tutor/weakness-analysis'
     | '/learner/'
+    | '/tutor/courses/$courseId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -318,6 +328,7 @@ export interface FileRouteTypes {
     | '/tutor/syllabus'
     | '/tutor/weakness-analysis'
     | '/learner'
+    | '/tutor/courses/$courseId'
   id:
     | '__root__'
     | '/'
@@ -347,6 +358,7 @@ export interface FileRouteTypes {
     | '/tutor/syllabus'
     | '/tutor/weakness-analysis'
     | '/learner/'
+    | '/tutor/courses/$courseId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -357,7 +369,7 @@ export interface RootRouteChildren {
   SelectRoleRoute: typeof SelectRoleRoute
   TutorAnalyticsRoute: typeof TutorAnalyticsRoute
   TutorAssignmentsRoute: typeof TutorAssignmentsRoute
-  TutorCoursesRoute: typeof TutorCoursesRoute
+  TutorCoursesRoute: typeof TutorCoursesRouteWithChildren
   TutorDigitalTwinRoute: typeof TutorDigitalTwinRoute
   TutorOverviewRoute: typeof TutorOverviewRoute
   TutorQuizzesRoute: typeof TutorQuizzesRoute
@@ -559,6 +571,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LearnerAskRouteImport
       parentRoute: typeof LearnerRoute
     }
+    '/tutor/courses/$courseId': {
+      id: '/tutor/courses/$courseId'
+      path: '/$courseId'
+      fullPath: '/tutor/courses/$courseId'
+      preLoaderRoute: typeof TutorCoursesCourseIdRouteImport
+      parentRoute: typeof TutorCoursesRoute
+    }
   }
 }
 
@@ -593,6 +612,18 @@ const LearnerRouteChildren: LearnerRouteChildren = {
 const LearnerRouteWithChildren =
   LearnerRoute._addFileChildren(LearnerRouteChildren)
 
+interface TutorCoursesRouteChildren {
+  TutorCoursesCourseIdRoute: typeof TutorCoursesCourseIdRoute
+}
+
+const TutorCoursesRouteChildren: TutorCoursesRouteChildren = {
+  TutorCoursesCourseIdRoute: TutorCoursesCourseIdRoute,
+}
+
+const TutorCoursesRouteWithChildren = TutorCoursesRoute._addFileChildren(
+  TutorCoursesRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LearnerRoute: LearnerRouteWithChildren,
@@ -601,7 +632,7 @@ const rootRouteChildren: RootRouteChildren = {
   SelectRoleRoute: SelectRoleRoute,
   TutorAnalyticsRoute: TutorAnalyticsRoute,
   TutorAssignmentsRoute: TutorAssignmentsRoute,
-  TutorCoursesRoute: TutorCoursesRoute,
+  TutorCoursesRoute: TutorCoursesRouteWithChildren,
   TutorDigitalTwinRoute: TutorDigitalTwinRoute,
   TutorOverviewRoute: TutorOverviewRoute,
   TutorQuizzesRoute: TutorQuizzesRoute,
