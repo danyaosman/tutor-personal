@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import { EduFooter, LanguageToggle, useEduLang } from "../lib/edumindUi";
 
 export const Route = createFileRoute("/tutor/digital-twin")({
@@ -9,7 +9,10 @@ export const Route = createFileRoute("/tutor/digital-twin")({
 function TutorDigitalTwinPage() {
   const { lang, setLang, dir, isArabic } = useEduLang();
 
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileStatus, setFileStatus] = useState("");
+  const [createMessage, setCreateMessage] = useState("");
+
   const [form, setForm] = useState({
     courseName: "",
     subject: "",
@@ -17,29 +20,6 @@ function TutorDigitalTwinPage() {
     description: "",
     instructions: "",
   });
-
-  function handleChange(
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) {
-    setForm({
-      ...form,
-      [event.target.name]: event.target.value,
-    });
-  }
-
-  function simulateUpload() {
-    setFileStatus(isArabic ? "جاري رفع الملف..." : "Uploading file...");
-
-    setTimeout(() => {
-      setFileStatus(isArabic ? "جاري تحليل ملف PDF..." : "Analyzing PDF file...");
-    }, 700);
-
-    setTimeout(() => {
-      setFileStatus(
-        isArabic ? "الملف جاهز للتوأم الرقمي" : "File is ready for the Digital Twin"
-      );
-    }, 1500);
-  }
 
   const t = {
     dashboard: isArabic ? "لوحة التحكم" : "Dashboard",
@@ -52,8 +32,8 @@ function TutorDigitalTwinPage() {
       ? "أنشئ كورساً يتعلم منه الذكاء الاصطناعي"
       : "Create a course your AI Tutor can learn from",
     desc: isArabic
-      ? "أدخل معلومات الكورس، ارفع ملفات PDF، وأضف تعليمات طريقة الشرح ليصبح التوأم الرقمي قريباً من أسلوبك."
-      : "Add course details, upload PDF resources, and write teaching instructions so the Digital Twin follows your style.",
+      ? "أدخل معلومات الكورس، ارفع ملف PDF، وأضف تعليمات طريقة الشرح ليصبح التوأم الرقمي قريباً من أسلوبك."
+      : "Add course details, upload a PDF resource, and write teaching instructions so the Digital Twin follows your style.",
 
     courseInfo: isArabic ? "معلومات الكورس" : "Course Information",
     courseName: isArabic ? "اسم الكورس" : "Course Name",
@@ -64,19 +44,112 @@ function TutorDigitalTwinPage() {
 
     uploadTitle: isArabic ? "رفع مصادر PDF" : "Upload PDF Resources",
     uploadDesc: isArabic
-      ? "ارفع ملفاً تعليمياً ليستخدمه التوأم الرقمي في الإجابات والشرح."
-      : "Upload learning material so the Digital Twin can use it in answers and explanations.",
-    uploadButton: isArabic ? "اختيار ملف PDF" : "Choose PDF File",
+      ? "اضغطي هنا لاختيار ملف PDF من جهازك."
+      : "Click here to choose a PDF file from your device.",
+    fileUploading: isArabic ? "جاري رفع الملف..." : "Uploading file...",
+    fileProcessing: isArabic ? "جاري تحليل ملف PDF..." : "Analyzing PDF file...",
+    fileReady: isArabic
+      ? "الملف جاهز للتوأم الرقمي"
+      : "File is ready for the Digital Twin",
 
     previewTitle: isArabic ? "ملخص التوأم الرقمي" : "Digital Twin Summary",
     ready: isArabic ? "جاهز مبدئياً" : "Initial setup ready",
     create: isArabic ? "إنشاء التوأم الرقمي" : "Create Digital Twin",
 
+    missing: isArabic
+      ? "رجاءً املئي اسم الكورس، المادة، المرحلة، واختاري ملف PDF أولاً."
+      : "Please fill course name, subject, grade, and choose a PDF file first.",
+    success: isArabic
+      ? "تم إنشاء التوأم الرقمي وحفظه مؤقتاً بنجاح."
+      : "Digital Twin has been created and saved temporarily.",
+
     step1: isArabic ? "معلومات الكورس" : "Course details",
-    step2: isArabic ? "ملفات PDF" : "PDF resources",
+    step2: isArabic ? "ملف PDF" : "PDF file",
     step3: isArabic ? "تعليمات الشرح" : "Teaching style",
     step4: isArabic ? "جاهز للمتعلمين" : "Ready for learners",
+
+    fileName: isArabic ? "اسم الملف" : "File name",
+    fileSize: isArabic ? "حجم الملف" : "File size",
+    temporaryNote: isArabic
+      ? "ملاحظة: حالياً يتم حفظ البيانات مؤقتاً داخل المتصفح لأن الربط مع الـ backend لم يتم بعد."
+      : "Note: For now, data is saved temporarily in the browser because backend integration is not connected yet.",
   };
+
+  function handleChange(
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) {
+    setForm({
+      ...form,
+      [event.target.name]: event.target.value,
+    });
+  }
+
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setSelectedFile(file);
+    setCreateMessage("");
+    setFileStatus(t.fileUploading);
+
+    setTimeout(() => {
+      setFileStatus(t.fileProcessing);
+    }, 700);
+
+    setTimeout(() => {
+      setFileStatus(t.fileReady);
+    }, 1500);
+  }
+
+  function formatFileSize(size: number) {
+    if (size < 1024 * 1024) {
+      return `${Math.round(size / 1024)} KB`;
+    }
+
+    return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+  }
+
+  function handleCreateDigitalTwin() {
+    const isMissingRequiredData =
+      !form.courseName.trim() ||
+      !form.subject.trim() ||
+      !form.grade.trim() ||
+      !selectedFile;
+
+    if (isMissingRequiredData) {
+      setCreateMessage(t.missing);
+      return;
+    }
+
+    const newDigitalTwin = {
+      id: Date.now(),
+      courseName: form.courseName,
+      subject: form.subject,
+      grade: form.grade,
+      description: form.description,
+      instructions: form.instructions,
+      file: {
+        name: selectedFile.name,
+        size: selectedFile.size,
+        type: selectedFile.type,
+      },
+      createdAt: new Date().toISOString(),
+    };
+
+    const savedTwins = JSON.parse(
+      localStorage.getItem("edumind_digital_twins") || "[]"
+    );
+
+    localStorage.setItem(
+      "edumind_digital_twins",
+      JSON.stringify([...savedTwins, newDigitalTwin])
+    );
+
+    setCreateMessage(t.success);
+  }
 
   return (
     <main className="em-app-page" dir={dir}>
@@ -131,7 +204,9 @@ function TutorDigitalTwinPage() {
                   name="courseName"
                   value={form.courseName}
                   onChange={handleChange}
-                  placeholder={isArabic ? "مثال: أساسيات الرياضيات" : "Example: Math Basics"}
+                  placeholder={
+                    isArabic ? "مثال: أساسيات الرياضيات" : "Example: Math Basics"
+                  }
                 />
               </label>
 
@@ -189,24 +264,30 @@ function TutorDigitalTwinPage() {
             <div className="em-panel-head">
               <div>
                 <span>{t.uploadTitle}</span>
-                <h2>{t.uploadButton}</h2>
+                <h2>PDF</h2>
               </div>
             </div>
 
-            <button
-              type="button"
-              className="em-upload-action"
-              onClick={simulateUpload}
-            >
-              <strong>PDF</strong>
-              <span>{t.uploadDesc}</span>
-            </button>
+            <label className="em-upload-action">
+              <input
+                type="file"
+                accept=".pdf,application/pdf"
+                onChange={handleFileChange}
+                style={{ display: "none" }}
+              />
 
-            {fileStatus && (
+              <strong>PDF</strong>
+
+              <span>{selectedFile ? selectedFile.name : t.uploadDesc}</span>
+            </label>
+
+            {selectedFile && (
               <div className="em-file-preview">
                 <div>
-                  <strong>course-material.pdf</strong>
-                  <p>{fileStatus}</p>
+                  <strong>{selectedFile.name}</strong>
+                  <p>
+                    {t.fileSize}: {formatFileSize(selectedFile.size)}
+                  </p>
                 </div>
 
                 <span>{fileStatus}</span>
@@ -216,17 +297,31 @@ function TutorDigitalTwinPage() {
             <div className="em-panel-head em-preview-head">
               <div>
                 <span>{t.previewTitle}</span>
-                <h2>{t.ready}</h2>
+                <h2>{selectedFile ? t.ready : t.uploadTitle}</h2>
               </div>
             </div>
 
             <div className="em-topic-cloud">
               <span>{form.courseName || t.courseName}</span>
               <span>{form.subject || t.subject}</span>
-              <span>{fileStatus || t.uploadTitle}</span>
+              <span>{selectedFile ? selectedFile.name : t.uploadTitle}</span>
             </div>
 
-            <button type="button" className="em-btn em-btn-primary em-full-btn">
+            <p className="em-builder-copy">{t.temporaryNote}</p>
+
+            {createMessage && (
+              <div className="em-file-preview">
+                <div>
+                  <strong>{createMessage}</strong>
+                </div>
+              </div>
+            )}
+
+            <button
+              type="button"
+              className="em-btn em-btn-primary em-full-btn"
+              onClick={handleCreateDigitalTwin}
+            >
               {t.create}
             </button>
           </div>

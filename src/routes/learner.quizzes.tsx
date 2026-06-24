@@ -1,53 +1,88 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { edQuizQuestions } from "../data/mockData";
+import { EduFooter, LanguageToggle, useEduLang } from "../lib/edumindUi";
 
 export const Route = createFileRoute("/learner/quizzes")({
-  component: LearnerQuizPage,
+  component: LearnerQuizzesPage,
 });
 
-function LearnerQuizPage() {
-  const navigate = useNavigate();
+function LearnerQuizzesPage() {
+  const { lang, setLang, dir, isArabic } = useEduLang();
 
+  const questions = edQuizQuestions as Array<Record<string, any>>;
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [selectedAnswer, setSelectedAnswer] = useState("");
+  const [score, setScore] = useState(0);
+  const [finished, setFinished] = useState(false);
 
-  const currentQuestion = edQuizQuestions[currentIndex];
-  const progress = ((currentIndex + 1) / edQuizQuestions.length) * 100;
+  const currentQuestion = questions[currentIndex] || {};
+  const options =
+    currentQuestion.options ||
+    currentQuestion.answers ||
+    (isArabic
+      ? ["الخيار الأول", "الخيار الثاني", "الخيار الثالث", "الخيار الرابع"]
+      : ["First option", "Second option", "Third option", "Fourth option"]);
 
-  function selectAnswer(answer: string) {
-    setAnswers({
-      ...answers,
-      [currentQuestion.id]: answer,
-    });
+  const correctAnswer =
+    currentQuestion.correctAnswer || currentQuestion.answer || options[0];
+
+  function handleNext() {
+    if (!selectedAnswer) {
+      return;
+    }
+
+    if (selectedAnswer === correctAnswer) {
+      setScore((currentScore) => currentScore + 1);
+    }
+
+    if (currentIndex === questions.length - 1) {
+      setFinished(true);
+      return;
+    }
+
+    setCurrentIndex((index) => index + 1);
+    setSelectedAnswer("");
   }
 
-  function submitQuiz() {
-    let correctCount = 0;
-    const weakTopics: string[] = [];
-
-    edQuizQuestions.forEach((question) => {
-      if (answers[question.id] === question.correctAnswer) {
-        correctCount += 1;
-      } else {
-        weakTopics.push(question.topic);
-      }
-    });
-
-    const result = {
-      score: Math.round((correctCount / edQuizQuestions.length) * 100),
-      correctCount,
-      totalQuestions: edQuizQuestions.length,
-      answers,
-      weakTopics: Array.from(new Set(weakTopics)),
-    };
-
-    localStorage.setItem("edumind_quiz_result", JSON.stringify(result));
-    navigate({ to: "/learner/weaknesses" });
+  function restartQuiz() {
+    setCurrentIndex(0);
+    setSelectedAnswer("");
+    setScore(0);
+    setFinished(false);
   }
+
+  const finalScore = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
+
+  const t = {
+    dashboard: isArabic ? "لوحة المتعلم" : "Dashboard",
+    courses: isArabic ? "الكورسات" : "Courses",
+    ask: isArabic ? "اسأل المدرّس الذكي" : "Ask AI Tutor",
+    quizzes: isArabic ? "الاختبارات" : "Quizzes",
+    weaknesses: isArabic ? "نقاط الضعف" : "Weaknesses",
+    logout: isArabic ? "تسجيل الخروج" : "Logout",
+
+    badge: isArabic ? "اختبار تفاعلي" : "Interactive Quiz",
+    title: isArabic ? "اختبر فهمك واكتشف نقاط ضعفك" : "Test your understanding and find weak points",
+    desc: isArabic
+      ? "أجب عن الأسئلة، ثم راجع نتيجتك والمواضيع التي تحتاج إلى شرح إضافي."
+      : "Answer the questions, then review your score and the topics that need extra explanation.",
+
+    question: isArabic ? "السؤال" : "Question",
+    from: isArabic ? "من" : "of",
+    next: isArabic ? "التالي" : "Next",
+    finish: isArabic ? "إنهاء الاختبار" : "Finish Quiz",
+    choose: isArabic ? "اختر إجابة للمتابعة" : "Choose an answer to continue",
+    result: isArabic ? "نتيجة الاختبار" : "Quiz Result",
+    yourScore: isArabic ? "نتيجتك" : "Your Score",
+    correct: isArabic ? "إجابات صحيحة" : "Correct answers",
+    restart: isArabic ? "إعادة الاختبار" : "Restart Quiz",
+    reviewWeaknesses: isArabic ? "راجع نقاط ضعفك" : "Review Weaknesses",
+    askAI: isArabic ? "اسأل المدرّس الذكي" : "Ask AI Tutor",
+  };
 
   return (
-    <main className="em-app-page">
+    <main className="em-app-page" dir={dir}>
       <div className="em-bg-orb em-orb-one" />
       <div className="em-bg-orb em-orb-two" />
 
@@ -58,99 +93,139 @@ function LearnerQuizPage() {
           </Link>
 
           <div>
-            <Link to="/learner">Dashboard</Link>
-            <Link to="/learner/courses">Courses</Link>
-            <Link to="/learner/ask">Ask AI</Link>
-            <Link to="/">Logout</Link>
+            <LanguageToggle lang={lang} setLang={setLang} />
+            <Link to="/learner">{t.dashboard}</Link>
+            <Link to="/learner/courses">{t.courses}</Link>
+            <Link to="/learner/ask">{t.ask}</Link>
+            <Link to="/learner/quizzes">{t.quizzes}</Link>
+            <Link to="/learner/weaknesses">{t.weaknesses}</Link>
+            <Link to="/">{t.logout}</Link>
           </div>
         </nav>
 
-        <header className="em-dashboard-hero em-quiz-hero">
+        <header className="em-dashboard-hero em-page-enter">
           <div>
-            <span>Course Quiz</span>
-            <h1>Test your understanding</h1>
-            <p>
-              Answer the quiz questions and EduMind will identify the topics you
-              need to improve.
-            </p>
+            <span>{t.badge}</span>
+            <h1>{t.title}</h1>
+            <p>{t.desc}</p>
           </div>
         </header>
 
-        <section className="em-quiz-layout">
-          <aside className="em-quiz-side">
-            <span>Database Systems</span>
-            <h2>Quiz Progress</h2>
+        {!finished ? (
+          <section className="em-dashboard-grid">
+            <div className="em-panel">
+              <div className="em-panel-head">
+                <div>
+                  <span>
+                    {t.question} {currentIndex + 1} {t.from} {questions.length}
+                  </span>
+                  <h2>
+                    {currentQuestion.question ||
+                      currentQuestion.title ||
+                      (isArabic
+                        ? "ما الإجابة الصحيحة لهذا السؤال؟"
+                        : "What is the correct answer for this question?")}
+                  </h2>
+                </div>
+              </div>
 
-            <div className="em-progress-ring">
-              <strong>
-                {currentIndex + 1}/{edQuizQuestions.length}
-              </strong>
-              <p>Questions</p>
-            </div>
+              <div className="em-result-list">
+                {options.map((option: string) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={
+                      selectedAnswer === option
+                        ? "em-choice-card em-stat-orange"
+                        : "em-choice-card"
+                    }
+                    onClick={() => setSelectedAnswer(option)}
+                  >
+                    <strong>{option}</strong>
+                  </button>
+                ))}
+              </div>
 
-            <div className="em-quiz-progress-bar">
-              <span style={{ width: `${progress}%` }} />
-            </div>
+              {!selectedAnswer && <p className="em-builder-copy">{t.choose}</p>}
 
-            <p>
-              Complete the quiz to discover your weak topics and ask the AI Tutor
-              for explanations.
-            </p>
-          </aside>
-
-          <section className="em-quiz-card-premium">
-            <div className="em-question-top">
-              <span>Question {currentIndex + 1}</span>
-              <small>{currentQuestion.topic}</small>
-            </div>
-
-            <h2>{currentQuestion.question}</h2>
-
-            <div className="em-answer-list">
-              {currentQuestion.options.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  className={
-                    answers[currentQuestion.id] === option ? "selected" : ""
-                  }
-                  onClick={() => selectAnswer(option)}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-
-            <div className="em-quiz-actions">
               <button
                 type="button"
-                className="em-btn em-btn-soft"
-                disabled={currentIndex === 0}
-                onClick={() => setCurrentIndex(currentIndex - 1)}
+                onClick={handleNext}
+                className="em-btn em-btn-primary em-full-btn"
               >
-                Previous
+                {currentIndex === questions.length - 1 ? t.finish : t.next}
               </button>
+            </div>
 
-              {currentIndex < edQuizQuestions.length - 1 ? (
-                <button
-                  type="button"
-                  className="em-btn em-btn-primary"
-                  onClick={() => setCurrentIndex(currentIndex + 1)}
-                >
-                  Next Question
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="em-btn em-btn-primary"
-                  onClick={submitQuiz}
-                >
-                  Submit Quiz
-                </button>
-              )}
+            <div className="em-panel">
+              <div className="em-panel-head">
+                <div>
+                  <span>{isArabic ? "تقدم الاختبار" : "Quiz Progress"}</span>
+                  <h2>
+                    {currentIndex + 1}/{questions.length}
+                  </h2>
+                </div>
+              </div>
+
+              <div className="em-topic-cloud">
+                <span>
+                  {t.correct}: {score}
+                </span>
+                <span>
+                  {t.question}: {currentIndex + 1}
+                </span>
+                <span>{currentQuestion.topic || (isArabic ? "موضوع عام" : "General topic")}</span>
+              </div>
+
+              <p className="em-builder-copy">
+                {isArabic
+                  ? "بعد إنهاء الاختبار، ستظهر النتيجة ويمكنك الانتقال مباشرة إلى صفحة نقاط الضعف."
+                  : "After finishing the quiz, your result will appear and you can move directly to the weaknesses page."}
+              </p>
             </div>
           </section>
-        </section>
+        ) : (
+          <section className="em-panel em-page-enter">
+            <div className="em-panel-head">
+              <div>
+                <span>{t.result}</span>
+                <h2>{t.yourScore}</h2>
+              </div>
+            </div>
+
+            <section className="em-stat-grid">
+              <article className="em-stat-card em-stat-orange">
+                <span>{t.yourScore}</span>
+                <strong>{finalScore}%</strong>
+                <p>{isArabic ? "النتيجة النهائية" : "final result"}</p>
+              </article>
+
+              <article className="em-stat-card">
+                <span>{t.correct}</span>
+                <strong>
+                  {score}/{questions.length}
+                </strong>
+                <p>{isArabic ? "إجابات صحيحة" : "correct answers"}</p>
+              </article>
+            </section>
+
+            <div className="em-learner-actions">
+              <button type="button" onClick={restartQuiz} className="em-btn em-btn-soft">
+                {t.restart}
+              </button>
+
+              <Link to="/learner/weaknesses" className="em-btn em-btn-primary">
+                {t.reviewWeaknesses}
+              </Link>
+
+              <Link to="/learner/ask" className="em-btn em-btn-soft">
+                {t.askAI}
+              </Link>
+            </div>
+          </section>
+        )}
+
+        <EduFooter lang={lang} />
       </section>
     </main>
   );

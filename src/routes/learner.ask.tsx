@@ -1,50 +1,90 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { edCourses } from "../data/mockData";
-
-type ChatMessage = {
-  sender: "learner" | "ai";
-  text: string;
-  source?: string;
-};
+import { EduFooter, LanguageToggle, useEduLang } from "../lib/edumindUi";
 
 export const Route = createFileRoute("/learner/ask")({
   component: LearnerAskPage,
 });
 
-function LearnerAskPage() {
-  const course = edCourses[0];
+type ChatMessage = {
+  role: "learner" | "ai";
+  text: string;
+};
 
-  const [message, setMessage] = useState("");
+function LearnerAskPage() {
+  const { lang, setLang, dir, isArabic } = useEduLang();
+
+  const [question, setQuestion] = useState("");
+  const [selectedCourse, setSelectedCourse] = useState(edCourses[0]?.name || "");
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
-      sender: "ai",
-      text: `Hi! I am ${course.tutorName}'s Digital Twin. Ask me anything about ${course.name}.`,
-      source: course.resource,
+      role: "ai",
+      text: isArabic
+        ? "مرحباً، أنا المدرّس الذكي. اختر كورساً واسألني عن أي نقطة غير واضحة."
+        : "Hi, I am your AI Tutor. Choose a course and ask me about anything unclear.",
     },
   ]);
 
-  function sendMessage() {
-    if (!message.trim()) return;
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!question.trim()) {
+      return;
+    }
 
     const learnerMessage: ChatMessage = {
-      sender: "learner",
-      text: message,
+      role: "learner",
+      text: question,
     };
 
     const aiMessage: ChatMessage = {
-      sender: "ai",
-      text:
-        "Based on the uploaded course material, this topic can be explained step by step. First, understand the main idea, then connect it with a simple example from the course.",
-      source: course.resource,
+      role: "ai",
+      text: isArabic
+        ? `سؤالك ممتاز. بناءً على كورس "${selectedCourse}"، أنصحك أن تراجع الفكرة خطوة بخطوة وتربطها بمثال بسيط. يمكنك أيضاً حل اختبار قصير لمعرفة نقطة الضعف بدقة.`
+        : `Great question. Based on "${selectedCourse}", I recommend reviewing the idea step by step and connecting it to a simple example. You can also take a short quiz to detect the weak point clearly.`,
     };
 
-    setMessages([...messages, learnerMessage, aiMessage]);
-    setMessage("");
+    setMessages((currentMessages) => [...currentMessages, learnerMessage, aiMessage]);
+    setQuestion("");
   }
 
+  function handleChange(event: ChangeEvent<HTMLTextAreaElement>) {
+    setQuestion(event.target.value);
+  }
+
+  const t = {
+    dashboard: isArabic ? "لوحة المتعلم" : "Dashboard",
+    courses: isArabic ? "الكورسات" : "Courses",
+    ask: isArabic ? "اسأل المدرّس الذكي" : "Ask AI Tutor",
+    quizzes: isArabic ? "الاختبارات" : "Quizzes",
+    weaknesses: isArabic ? "نقاط الضعف" : "Weaknesses",
+    logout: isArabic ? "تسجيل الخروج" : "Logout",
+
+    badge: isArabic ? "محادثة تعليمية" : "Learning Chat",
+    title: isArabic ? "اسأل التوأم الرقمي للمدرّس" : "Ask the tutor’s Digital Twin",
+    desc: isArabic
+      ? "اكتب سؤالك وسيحاول المدرّس الذكي الإجابة اعتماداً على مصادر الكورس وطريقة شرح المدرّس."
+      : "Write your question and the AI Tutor will answer based on the course resources and teaching style.",
+
+    selectCourse: isArabic ? "اختر الكورس" : "Select course",
+    chatTitle: isArabic ? "المحادثة" : "Conversation",
+    chatDesc: isArabic
+      ? "اسأل عن المفاهيم، الأمثلة، أو نقاط الضعف."
+      : "Ask about concepts, examples, or weak points.",
+    placeholder: isArabic
+      ? "اكتب سؤالك هنا..."
+      : "Write your question here...",
+    send: isArabic ? "إرسال السؤال" : "Send Question",
+    quickHelp: isArabic ? "اقتراحات سريعة" : "Quick Suggestions",
+    suggestion1: isArabic ? "اشرح لي هذا الدرس ببساطة" : "Explain this lesson simply",
+    suggestion2: isArabic ? "أعطني مثالاً خطوة بخطوة" : "Give me a step-by-step example",
+    suggestion3: isArabic ? "ما أهم نقطة لازم أراجعها؟" : "What should I review first?",
+    startQuiz: isArabic ? "ابدأ اختباراً" : "Start a Quiz",
+  };
+
   return (
-    <main className="em-app-page">
+    <main className="em-app-page" dir={dir}>
       <div className="em-bg-orb em-orb-one" />
       <div className="em-bg-orb em-orb-two" />
 
@@ -55,101 +95,119 @@ function LearnerAskPage() {
           </Link>
 
           <div>
-            <Link to="/learner">Dashboard</Link>
-            <Link to="/learner/courses">Courses</Link>
-            <Link to="/learner/quizzes">Quiz</Link>
-            <Link to="/">Logout</Link>
+            <LanguageToggle lang={lang} setLang={setLang} />
+            <Link to="/learner">{t.dashboard}</Link>
+            <Link to="/learner/courses">{t.courses}</Link>
+            <Link to="/learner/ask">{t.ask}</Link>
+            <Link to="/learner/quizzes">{t.quizzes}</Link>
+            <Link to="/learner/weaknesses">{t.weaknesses}</Link>
+            <Link to="/">{t.logout}</Link>
           </div>
         </nav>
 
-        <header className="em-dashboard-hero em-chat-hero">
+        <header className="em-dashboard-hero em-page-enter">
           <div>
-            <span>AI Tutor Chat</span>
-            <h1>Ask the tutor’s Digital Twin</h1>
-            <p>
-              Chat with the AI Tutor and get answers based on the tutor’s
-              uploaded course resources.
-            </p>
+            <span>{t.badge}</span>
+            <h1>{t.title}</h1>
+            <p>{t.desc}</p>
           </div>
+
+          <Link to="/learner/quizzes" className="em-btn em-btn-primary">
+            {t.startQuiz}
+          </Link>
         </header>
 
-        <section className="em-chat-layout">
-          <div className="em-chat-panel">
-            <div className="em-chat-top">
+        <section className="em-dashboard-grid">
+          <div className="em-panel">
+            <div className="em-panel-head">
               <div>
-                <span>Digital Twin</span>
-                <h2>{course.tutorName}</h2>
-                <p>{course.name}</p>
+                <span>{t.chatTitle}</span>
+                <h2>{t.chatDesc}</h2>
               </div>
-
-              <small>Source-based answers</small>
             </div>
 
-            <div className="em-chat-box-premium">
-              {messages.map((msg, index) => (
-                <div
+            <label className="em-builder-copy">
+              {t.selectCourse}
+              <select
+                className="em-search-input"
+                value={selectedCourse}
+                onChange={(event) => setSelectedCourse(event.target.value)}
+              >
+                {edCourses.map((course) => (
+                  <option key={course.id} value={course.name}>
+                    {course.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="em-result-list">
+              {messages.map((message, index) => (
+                <article
                   key={index}
                   className={
-                    msg.sender === "learner"
-                      ? "em-chat-bubble em-user-bubble"
-                      : "em-chat-bubble em-ai-bubble"
+                    message.role === "ai"
+                      ? "em-result-card"
+                      : "em-result-card em-stat-orange"
                   }
                 >
-                  <p>{msg.text}</p>
-
-                  {msg.sender === "ai" && msg.source && (
-                    <span>Source: {msg.source}</span>
-                  )}
-                </div>
+                  <div>
+                    <h3>{message.role === "ai" ? "EduMind AI" : isArabic ? "أنت" : "You"}</h3>
+                    <p>{message.text}</p>
+                  </div>
+                </article>
               ))}
             </div>
 
-            <div className="em-chat-input-premium">
-              <input
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") sendMessage();
-                }}
-                placeholder="Ask your AI Tutor..."
-              />
+            <form onSubmit={handleSubmit} className="em-builder-form">
+              <label>
+                {t.ask}
+                <textarea
+                  value={question}
+                  onChange={handleChange}
+                  placeholder={t.placeholder}
+                />
+              </label>
 
-              <button type="button" className="em-btn em-btn-primary" onClick={sendMessage}>
-                Send
+              <button type="submit" className="em-btn em-btn-primary em-full-btn">
+                {t.send}
               </button>
-            </div>
+            </form>
           </div>
 
-          <aside className="em-chat-side">
+          <div className="em-panel">
             <div className="em-panel-head">
               <div>
-                <span>Suggested Questions</span>
-                <h2>Start here</h2>
+                <span>{t.quickHelp}</span>
+                <h2>{isArabic ? "ابدأ من هنا" : "Start from here"}</h2>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setMessage("Explain normalization in a simple way.")}
-            >
-              Explain normalization in a simple way.
-            </button>
+            <div className="em-topic-cloud">
+              {[t.suggestion1, t.suggestion2, t.suggestion3].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => setQuestion(suggestion)}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
 
-            <button
-              type="button"
-              onClick={() => setMessage("Give me a real-life ERD example.")}
-            >
-              Give me a real-life ERD example.
-            </button>
+            <p className="em-builder-copy">
+              {isArabic
+                ? "بعد المحادثة، يمكنك حل اختبار قصير حتى تعرف إذا فهمت الفكرة أو ما زلت تحتاج مراجعة."
+                : "After chatting, you can take a short quiz to check whether you understood the idea or still need review."}
+            </p>
 
-            <button
-              type="button"
-              onClick={() => setMessage("What should I review before the quiz?")}
-            >
-              What should I review before the quiz?
-            </button>
-          </aside>
+            <Link to="/learner/quizzes" className="em-btn em-btn-primary">
+              {t.startQuiz}
+            </Link>
+          </div>
         </section>
+
+        <EduFooter lang={lang} />
       </section>
     </main>
   );
