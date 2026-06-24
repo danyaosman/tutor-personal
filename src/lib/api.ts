@@ -283,11 +283,48 @@ export function resolveFileUrl(fileUrl: string) {
   return `${API_URL}${fileUrl.startsWith("/") ? "" : "/"}${fileUrl}`;
 }
 
-export function chatWithCourse(courseId: number, message: string) {
+export interface ChatMessageHistory {
+  id: number;
+  sender: "student" | "ai";
+  message_text: string;
+  source_references: CourseChatSource[];
+  created_at: string;
+}
+
+export interface ChatSessionSummary {
+  id: number;
+  course_id: number;
+  created_at: string;
+  last_message: {
+    sender: "student" | "ai";
+    message_text: string;
+    created_at: string;
+  } | null;
+}
+
+export interface ChatSessionDetail {
+  id: number;
+  course_id: number;
+  created_at: string;
+  messages: ChatMessageHistory[];
+}
+
+export function chatWithCourse(courseId: number, message: string, sessionId?: number) {
   return apiRequest<CourseChatResponse>(`/api/ai/courses/${courseId}/chat/`, {
     method: "POST",
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({
+      message,
+      ...(sessionId ? { session_id: sessionId } : {}),
+    }),
   });
+}
+
+export function listCourseChatSessions(courseId: number) {
+  return apiRequest<ChatSessionSummary[]>(`/api/ai/courses/${courseId}/chat/sessions/`);
+}
+
+export function getChatSession(sessionId: number) {
+  return apiRequest<ChatSessionDetail>(`/api/ai/chat/sessions/${sessionId}/`);
 }
 
 export function getRoleHome(role: UserRole) {

@@ -6,6 +6,8 @@ from rest_framework.views import APIView
 from accounts.permissions import IsStudent
 from ai_tutor.models import ChatMessage, ChatSession
 from ai_tutor.serializers import (
+    ChatSessionDetailSerializer,
+    ChatSessionListSerializer,
     CourseChatRequestSerializer,
     CourseChatResponseSerializer,
 )
@@ -18,6 +20,7 @@ class CourseChatView(APIView):
 
     def post(self, request, course_pk):
         course = get_object_or_404(Course, pk=course_pk, status="active")
+
         if not ClassroomEnrollment.objects.filter(
             student=request.user,
             classroom__course=course,
@@ -26,21 +29,34 @@ class CourseChatView(APIView):
                 {"detail": "Enroll in this course before asking the AI tutor."},
                 status=status.HTTP_403_FORBIDDEN,
             )
+
         request_serializer = CourseChatRequestSerializer(data=request.data)
         request_serializer.is_valid(raise_exception=True)
 
         question = request_serializer.validated_data["message"]
+        session_id = request_serializer.validated_data.get("session_id")
+
+        if session_id:
+            session = get_object_or_404(
+                ChatSession,
+                id=session_id,
+                student=request.user,
+                course=course,
+            )
+        else:
+            session = ChatSession.objects.create(
+                student=request.user,
+                course=course,
+            )
+
         answer, sources = answer_course_question(course, question)
 
-        session = ChatSession.objects.create(
-            student=request.user,
-            course=course,
-        )
         ChatMessage.objects.create(
             session=session,
             sender="student",
             message_text=question,
         )
+
         ChatMessage.objects.create(
             session=session,
             sender="ai",
@@ -57,3 +73,44 @@ class CourseChatView(APIView):
             }
         )
         return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+class StudentCourseChatSessionListView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsStudent]
+
+    def get(self, request, course_pk):
+        course = get_object_or_404(Course, pk=course_pk, status="active")
+
+        if not ClassroomEnrollment.objects.filter(
+            student=request.user,
+            classroom__course=course,
+        ).exists():
+            return Response(
+                {"detail": "Enroll in this course before viewing chat history."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        sessions = (
+            ChatSession.objects.filter(
+                student=request.user,
+                course=course,
+            )
+            .prefetch_related("messages")
+            .order_by("-created_at")
+        )
+
+        serializer = ChatSessionListSerializer(sessions, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class StudentChatSessionDetailView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsStudent]
+
+    def get(self, request, session_pk):
+        session = get_object_or_404(
+            ChatSession.objects.prefetch_related("messages"),
+            id=session_pk,
+            student=request.user,
+        )
+
+        serializer = ChatSessionDetailSerializer(session)
+        return Response(serializer.data, status=status.HTTP_200_OK)
