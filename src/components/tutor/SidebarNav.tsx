@@ -1,16 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard,
-  Bot,
   BookOpen,
-  FolderOpen,
-  Target,
-  HelpCircle,
-  ClipboardList,
-  BarChart3,
-  AlertTriangle,
-  Inbox,
-  Settings,
   Sparkles,
   LogOut,
 } from "lucide-react";
@@ -19,17 +9,7 @@ import { currentUserQueryKey, useCurrentUser } from "@/hooks/use-current-user";
 import { useQueryClient } from "@tanstack/react-query";
 
 const nav = [
-  { to: "/tutor/overview", label: "Overview", icon: LayoutDashboard },
-  { to: "/tutor/digital-twin", label: "Digital Twin", icon: Bot },
   { to: "/tutor/courses", label: "Courses", icon: BookOpen },
-  { to: "/tutor/resources", label: "Resources", icon: FolderOpen },
-  { to: "/tutor/syllabus", label: "Syllabus & Goals", icon: Target },
-  { to: "/tutor/quizzes", label: "Quizzes", icon: HelpCircle },
-  { to: "/tutor/assignments", label: "Assignments", icon: ClipboardList },
-  { to: "/tutor/analytics", label: "Student Analytics", icon: BarChart3 },
-  { to: "/tutor/weakness-analysis", label: "Weakness Analysis", icon: AlertTriangle },
-  { to: "/tutor/requests", label: "Requests", icon: Inbox },
-  { to: "/tutor/settings", label: "Settings", icon: Settings },
 ] as const;
 
 export function SidebarNav() {
@@ -47,7 +27,7 @@ export function SidebarNav() {
         </div>
         <div className="leading-tight">
           <div className="text-sm font-extrabold tracking-tight">AI Tutor</div>
-          <div className="text-[11px] text-muted-foreground">Teach with your twin</div>
+          <div className="text-[11px] text-muted-foreground">Course workspace</div>
         </div>
       </div>
 

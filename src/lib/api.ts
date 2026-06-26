@@ -309,6 +309,94 @@ export interface ChatSessionDetail {
   messages: ChatMessageHistory[];
 }
 
+export type QuizDifficulty = "easy" | "medium" | "hard";
+
+export interface QuizOption {
+  key: string;
+  text: string;
+}
+
+export interface QuizQuestion {
+  id: number;
+  question_text: string;
+  options: QuizOption[];
+}
+
+export interface QuizQuestionResult extends QuizQuestion {
+  correct_option: string;
+  explanation: string;
+}
+
+export interface QuizSummary {
+  id: number;
+  course_id: number;
+  course_title: string;
+  title: string;
+  difficulty_level: QuizDifficulty;
+  question_count: number;
+  attempt_count: number;
+  best_score: number | null;
+  created_at: string;
+}
+
+export interface QuizDetail {
+  id: number;
+  course_id: number;
+  course_title: string;
+  title: string;
+  difficulty_level: QuizDifficulty;
+  questions: QuizQuestion[];
+  created_at: string;
+}
+
+export interface GenerateQuizInput {
+  question_count?: number;
+  difficulty_level?: QuizDifficulty;
+}
+
+export interface QuizAnswerSubmission {
+  question_id: number;
+  selected_option: string;
+}
+
+export interface QuizAttemptAnswer {
+  question: QuizQuestionResult;
+  selected_option: string;
+  is_correct: boolean;
+}
+
+export interface QuizAttemptResult {
+  id: number;
+  quiz_id: number;
+  score: number;
+  attempted_at: string;
+  answers: QuizAttemptAnswer[];
+}
+
+export interface Flashcard {
+  id: number;
+  front: string;
+  back: string;
+}
+
+export interface FlashcardSetSummary {
+  id: number;
+  course_id: number;
+  course_title: string;
+  title: string;
+  card_count: number;
+  created_at: string;
+}
+
+export interface FlashcardSetDetail {
+  id: number;
+  course_id: number;
+  course_title: string;
+  title: string;
+  cards: Flashcard[];
+  created_at: string;
+}
+
 export function chatWithCourse(courseId: number, message: string, sessionId?: number) {
   return apiRequest<CourseChatResponse>(`/api/ai/courses/${courseId}/chat/`, {
     method: "POST",
@@ -327,6 +415,43 @@ export function getChatSession(sessionId: number) {
   return apiRequest<ChatSessionDetail>(`/api/ai/chat/sessions/${sessionId}/`);
 }
 
+export function listQuizzes() {
+  return apiRequest<QuizSummary[]>("/api/quizzes/");
+}
+
+export function generateCourseQuiz(courseId: number, input: GenerateQuizInput = {}) {
+  return apiRequest<QuizDetail>(`/api/quizzes/courses/${courseId}/generate/`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getQuiz(quizId: number) {
+  return apiRequest<QuizDetail>(`/api/quizzes/${quizId}/`);
+}
+
+export function submitQuizAttempt(quizId: number, answers: QuizAnswerSubmission[]) {
+  return apiRequest<QuizAttemptResult>(`/api/quizzes/${quizId}/submit/`, {
+    method: "POST",
+    body: JSON.stringify({ answers }),
+  });
+}
+
+export function listFlashcardSets() {
+  return apiRequest<FlashcardSetSummary[]>("/api/flashcards/");
+}
+
+export function generateCourseFlashcards(courseId: number, cardCount = 10) {
+  return apiRequest<FlashcardSetDetail>(`/api/flashcards/courses/${courseId}/generate/`, {
+    method: "POST",
+    body: JSON.stringify({ card_count: cardCount }),
+  });
+}
+
+export function getFlashcardSet(setId: number) {
+  return apiRequest<FlashcardSetDetail>(`/api/flashcards/${setId}/`);
+}
+
 export function getRoleHome(role: UserRole) {
-  return role === "teacher" ? "/tutor/overview" : "/learner";
+  return role === "teacher" ? "/tutor/courses" : "/learner/courses";
 }

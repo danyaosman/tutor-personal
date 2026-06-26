@@ -33,6 +33,7 @@ import { Route as LearnerSessionsRouteImport } from './routes/learner.sessions'
 import { Route as LearnerResourcesRouteImport } from './routes/learner.resources'
 import { Route as LearnerQuizzesRouteImport } from './routes/learner.quizzes'
 import { Route as LearnerProgressRouteImport } from './routes/learner.progress'
+import { Route as LearnerFlashcardsRouteImport } from './routes/learner.flashcards'
 import { Route as LearnerCoursesRouteImport } from './routes/learner.courses'
 import { Route as LearnerAssignmentsRouteImport } from './routes/learner.assignments'
 import { Route as LearnerAskRouteImport } from './routes/learner.ask'
@@ -159,6 +160,11 @@ const LearnerProgressRoute = LearnerProgressRouteImport.update({
   path: '/progress',
   getParentRoute: () => LearnerRoute,
 } as any)
+const LearnerFlashcardsRoute = LearnerFlashcardsRouteImport.update({
+  id: '/flashcards',
+  path: '/flashcards',
+  getParentRoute: () => LearnerRoute,
+} as any)
 const LearnerCoursesRoute = LearnerCoursesRouteImport.update({
   id: '/courses',
   path: '/courses',
@@ -194,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/learner/ask': typeof LearnerAskRoute
   '/learner/assignments': typeof LearnerAssignmentsRoute
   '/learner/courses': typeof LearnerCoursesRouteWithChildren
+  '/learner/flashcards': typeof LearnerFlashcardsRoute
   '/learner/progress': typeof LearnerProgressRoute
   '/learner/quizzes': typeof LearnerQuizzesRoute
   '/learner/resources': typeof LearnerResourcesRoute
@@ -224,6 +231,7 @@ export interface FileRoutesByTo {
   '/learner/ask': typeof LearnerAskRoute
   '/learner/assignments': typeof LearnerAssignmentsRoute
   '/learner/courses': typeof LearnerCoursesRouteWithChildren
+  '/learner/flashcards': typeof LearnerFlashcardsRoute
   '/learner/progress': typeof LearnerProgressRoute
   '/learner/quizzes': typeof LearnerQuizzesRoute
   '/learner/resources': typeof LearnerResourcesRoute
@@ -256,6 +264,7 @@ export interface FileRoutesById {
   '/learner/ask': typeof LearnerAskRoute
   '/learner/assignments': typeof LearnerAssignmentsRoute
   '/learner/courses': typeof LearnerCoursesRouteWithChildren
+  '/learner/flashcards': typeof LearnerFlashcardsRoute
   '/learner/progress': typeof LearnerProgressRoute
   '/learner/quizzes': typeof LearnerQuizzesRoute
   '/learner/resources': typeof LearnerResourcesRoute
@@ -289,6 +298,7 @@ export interface FileRouteTypes {
     | '/learner/ask'
     | '/learner/assignments'
     | '/learner/courses'
+    | '/learner/flashcards'
     | '/learner/progress'
     | '/learner/quizzes'
     | '/learner/resources'
@@ -319,6 +329,7 @@ export interface FileRouteTypes {
     | '/learner/ask'
     | '/learner/assignments'
     | '/learner/courses'
+    | '/learner/flashcards'
     | '/learner/progress'
     | '/learner/quizzes'
     | '/learner/resources'
@@ -350,6 +361,7 @@ export interface FileRouteTypes {
     | '/learner/ask'
     | '/learner/assignments'
     | '/learner/courses'
+    | '/learner/flashcards'
     | '/learner/progress'
     | '/learner/quizzes'
     | '/learner/resources'
@@ -562,6 +574,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LearnerProgressRouteImport
       parentRoute: typeof LearnerRoute
     }
+    '/learner/flashcards': {
+      id: '/learner/flashcards'
+      path: '/flashcards'
+      fullPath: '/learner/flashcards'
+      preLoaderRoute: typeof LearnerFlashcardsRouteImport
+      parentRoute: typeof LearnerRoute
+    }
     '/learner/courses': {
       id: '/learner/courses'
       path: '/courses'
@@ -616,6 +635,7 @@ interface LearnerRouteChildren {
   LearnerAskRoute: typeof LearnerAskRoute
   LearnerAssignmentsRoute: typeof LearnerAssignmentsRoute
   LearnerCoursesRoute: typeof LearnerCoursesRouteWithChildren
+  LearnerFlashcardsRoute: typeof LearnerFlashcardsRoute
   LearnerProgressRoute: typeof LearnerProgressRoute
   LearnerQuizzesRoute: typeof LearnerQuizzesRoute
   LearnerResourcesRoute: typeof LearnerResourcesRoute
@@ -630,6 +650,7 @@ const LearnerRouteChildren: LearnerRouteChildren = {
   LearnerAskRoute: LearnerAskRoute,
   LearnerAssignmentsRoute: LearnerAssignmentsRoute,
   LearnerCoursesRoute: LearnerCoursesRouteWithChildren,
+  LearnerFlashcardsRoute: LearnerFlashcardsRoute,
   LearnerProgressRoute: LearnerProgressRoute,
   LearnerQuizzesRoute: LearnerQuizzesRoute,
   LearnerResourcesRoute: LearnerResourcesRoute,

@@ -21,6 +21,9 @@ class CourseChatView(APIView):
     def post(self, request, course_pk):
         course = get_object_or_404(Course, pk=course_pk, status="active")
 
+        request_serializer = CourseChatRequestSerializer(data=request.data)
+        request_serializer.is_valid(raise_exception=True)
+
         if not ClassroomEnrollment.objects.filter(
             student=request.user,
             classroom__course=course,
@@ -29,9 +32,6 @@ class CourseChatView(APIView):
                 {"detail": "Enroll in this course before asking the AI tutor."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-
-        request_serializer = CourseChatRequestSerializer(data=request.data)
-        request_serializer.is_valid(raise_exception=True)
 
         question = request_serializer.validated_data["message"]
         session_id = request_serializer.validated_data.get("session_id")

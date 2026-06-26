@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { GraduationCap, BookOpenCheck, ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpenCheck, GraduationCap, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/select-role")({
   component: SelectRole,
@@ -9,7 +9,7 @@ function SelectRole() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
       <div className="pointer-events-none absolute inset-0 gradient-ai-soft opacity-70" />
-      <div className="pointer-events-none absolute -top-40 -left-40 h-96 w-96 rounded-full gradient-ai opacity-30 blur-3xl" />
+      <div className="pointer-events-none absolute -left-40 -top-40 h-96 w-96 rounded-full gradient-ai opacity-30 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-40 -right-40 h-96 w-96 rounded-full gradient-ai opacity-20 blur-3xl" />
 
       <div className="relative mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-4 py-10">
@@ -20,22 +20,26 @@ function SelectRole() {
           <span className="text-xl font-extrabold tracking-tight">AI Tutor</span>
         </Link>
 
-        <h1 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">How will you use AI Tutor?</h1>
-        <p className="mt-3 max-w-xl text-center text-muted-foreground">Choose the experience that fits you. You can switch later.</p>
+        <h1 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">
+          How will you use AI Tutor?
+        </h1>
+        <p className="mt-3 max-w-xl text-center text-muted-foreground">
+          Choose the workspace that matches the backend-supported demo flow.
+        </p>
 
         <div className="mt-10 grid w-full gap-5 sm:grid-cols-2">
           <RoleCard
-            to="/tutor/overview"
+            to="/tutor/courses"
             icon={<GraduationCap className="h-7 w-7" />}
             title="I'm a Tutor"
-            description="Build your AI teaching twin, manage courses, quizzes, and analyze student progress."
+            description="Create courses, upload PDFs, and prepare materials learners use with AI."
             cta="Enter tutor workspace"
           />
           <RoleCard
-            to="/learner"
+            to="/learner/courses"
             icon={<BookOpenCheck className="h-7 w-7" />}
             title="I'm a Learner"
-            description="Learn from AI tutors trained by your teachers — personalized, on your schedule."
+            description="Enroll in courses, ask the AI tutor, take quizzes, and review flashcards."
             cta="Go to learner space"
           />
         </div>
@@ -44,7 +48,13 @@ function SelectRole() {
   );
 }
 
-function RoleCard({ to, icon, title, description, cta }: {
+function RoleCard({
+  to,
+  icon,
+  title,
+  description,
+  cta,
+}: {
   to: string;
   icon: React.ReactNode;
   title: string;

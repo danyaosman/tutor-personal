@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   chatWithCourse,
+  generateCourseFlashcards,
+  generateCourseQuiz,
   getChatSession,
   listCourseChatSessions,
   listEnrolledCourses,
@@ -23,11 +25,15 @@ import {
 import {
   ArrowLeft,
   Bot,
+  Brain,
+  CheckCircle2,
   ExternalLink,
+  HelpCircle,
   FileText,
   Loader2,
   MessageSquare,
   Plus,
+  Layers,
   Search,
   Send,
   User,
@@ -70,6 +76,7 @@ function LearnerCourseNotebook() {
   const [streamingAnswer, setStreamingAnswer] = useState("");
   const [streamingSources, setStreamingSources] = useState<CourseChatResponse["sources"]>([]);
   const [selectedSource, setSelectedSource] = useState<CourseChatSource | null>(null);
+  const [studyToolMessage, setStudyToolMessage] = useState("");
 
   const streamTimerRef = useRef<ReturnType<typeof window.setInterval> | null>(null);
 
@@ -121,6 +128,22 @@ function LearnerCourseNotebook() {
 
     onError: () => {
       setActiveSteps([]);
+    },
+  });
+
+  const generateQuizMutation = useMutation({
+    mutationFn: () => generateCourseQuiz(courseId, { question_count: 5, difficulty_level: "medium" }),
+    onSuccess: async (quiz) => {
+      setStudyToolMessage(`Created "${quiz.title}" with ${quiz.questions.length} questions.`);
+      await queryClient.invalidateQueries({ queryKey: ["learner-quizzes"] });
+    },
+  });
+
+  const generateFlashcardsMutation = useMutation({
+    mutationFn: () => generateCourseFlashcards(courseId, 10),
+    onSuccess: async (cardSet) => {
+      setStudyToolMessage(`Created "${cardSet.title}" with ${cardSet.cards.length} cards.`);
+      await queryClient.invalidateQueries({ queryKey: ["learner-flashcard-sets"] });
     },
   });
 
@@ -281,6 +304,77 @@ function LearnerCourseNotebook() {
         <>
           <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
             <div className="space-y-5">
+              <Card className="h-fit border-primary/20 shadow-soft">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Brain className="h-5 w-5 text-primary" /> Study Tools
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      onClick={() => {
+                        setStudyToolMessage("");
+                        generateQuizMutation.mutate();
+                      }}
+                      disabled={generateQuizMutation.isPending}
+                      className="gradient-ai text-white"
+                    >
+                      {generateQuizMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <HelpCircle className="h-4 w-4" />
+                      )}
+                      Quiz
+                    </Button>
+
+                    <Button
+                      onClick={() => {
+                        setStudyToolMessage("");
+                        generateFlashcardsMutation.mutate();
+                      }}
+                      disabled={generateFlashcardsMutation.isPending}
+                      variant="outline"
+                    >
+                      {generateFlashcardsMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Layers className="h-4 w-4" />
+                      )}
+                      Cards
+                    </Button>
+                  </div>
+
+                  {(generateQuizMutation.error || generateFlashcardsMutation.error) && (
+                    <Alert variant="destructive">
+                      <AlertDescription>
+                        {generateQuizMutation.error?.message ??
+                          generateFlashcardsMutation.error?.message}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {studyToolMessage && (
+                    <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-700">
+                      <div className="flex items-start gap-2">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>{studyToolMessage}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button asChild size="sm" variant="ghost">
+                      <Link to="/learner/quizzes">Open Quizzes</Link>
+                    </Button>
+                    <Button asChild size="sm" variant="ghost">
+                      <Link to="/learner/flashcards">Open Cards</Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card className="h-fit shadow-soft">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">

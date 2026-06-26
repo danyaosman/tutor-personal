@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { Bell, Search } from "lucide-react";
 import { SidebarNav } from "./SidebarNav";
 import { useRequireRole } from "@/hooks/use-require-role";
 
@@ -25,22 +24,9 @@ export function TutorLayout({
       <SidebarNav />
       <div className="md:pl-[260px]">
         <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-md sm:px-6">
-          <div className="hidden md:flex relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search students, courses, resources…"
-              className="w-full rounded-lg border border-input bg-secondary/50 pl-9 pr-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
-            />
-          </div>
           <div className="md:hidden text-sm font-semibold">AI Tutor</div>
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              className="rounded-md border border-input p-2 hover:bg-accent"
-              aria-label="Notifications"
-            >
-              <Bell className="h-4 w-4" />
-            </button>
+          <div className="ml-auto text-xs font-medium text-muted-foreground">
+            Course workspace
           </div>
         </header>
 
@@ -50,7 +36,7 @@ export function TutorLayout({
               <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
               {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
             </div>
-            {actions && <div className="shrink-0 flex items-center gap-2">{actions}</div>}
+            {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
           </div>
           {children}
         </main>

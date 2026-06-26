@@ -22,7 +22,7 @@ import {
   listEnrolledCourses,
   type LearnerCourse,
 } from "@/lib/api";
-import { BookOpen, MessageCircle, Play, Search, Users } from "lucide-react";
+import { BookOpen, MessageCircle, Search, Users } from "lucide-react";
 
 export const Route = createFileRoute("/learner/courses")({
   head: () => ({ meta: [{ title: "My Courses - AI Tutor" }] }),
@@ -239,15 +239,10 @@ function EnrolledCourseCard({ course }: { course: LearnerCourse }) {
             <Users className="h-3.5 w-3.5" /> {course.student_count} students
           </span>
         </div>
-        <div className="mt-4 flex gap-2">
+        <div className="mt-4">
           <Button className="flex-1 gradient-ai text-white shadow-glow" asChild>
             <Link to="/learner/courses/$courseId" params={{ courseId: String(course.id) }}>
               <MessageCircle className="h-4 w-4" /> Open Notebook
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link to="/learner/resources">
-              <Play className="h-4 w-4" />
             </Link>
           </Button>
         </div>

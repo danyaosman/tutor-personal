@@ -2,21 +2,14 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  AlertTriangle,
   ArrowLeft,
-  BarChart3,
   BookOpen,
-  ClipboardList,
   ExternalLink,
   FileText,
   FolderOpen,
-  HelpCircle,
-  Inbox,
   Pencil,
-  Target,
   Trash2,
   UploadCloud,
-  Users,
 } from "lucide-react";
 import { TutorLayout } from "@/components/tutor/TutorLayout";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -69,77 +62,16 @@ export const Route = createFileRoute("/tutor/courses/$courseId")({
   component: CourseDetailPage,
 });
 
-type CourseSectionId =
-  | "overview"
-  | "resources"
-  | "syllabus"
-  | "quizzes"
-  | "assignments"
-  | "classes"
-  | "analytics"
-  | "weakness"
-  | "requests";
+type CourseSectionId = "overview" | "resources";
 
 const courseSections = [
   { id: "overview", label: "Overview", icon: BookOpen },
   { id: "resources", label: "Resources / PDFs", icon: FolderOpen },
-  { id: "syllabus", label: "Syllabus & Goals", icon: Target },
-  { id: "quizzes", label: "Quizzes", icon: HelpCircle },
-  { id: "assignments", label: "Assignments", icon: ClipboardList },
-  { id: "classes", label: "Classes & Students", icon: Users },
-  { id: "analytics", label: "Student Analytics", icon: BarChart3 },
-  { id: "weakness", label: "Weakness Analysis", icon: AlertTriangle },
-  { id: "requests", label: "Requests", icon: Inbox },
 ] as const satisfies ReadonlyArray<{
   id: CourseSectionId;
   label: string;
   icon: typeof BookOpen;
 }>;
-
-const sectionCopy: Record<
-  Exclude<CourseSectionId, "overview" | "resources">,
-  { title: string; description: string; items: string[] }
-> = {
-  syllabus: {
-    title: "Syllabus & Goals",
-    description:
-      "This area should let the tutor define what the course covers and what learners should achieve.",
-    items: ["Course goals", "Weekly topics", "Tutor-edited syllabus summary"],
-  },
-  quizzes: {
-    title: "Quizzes",
-    description:
-      "This area should let the tutor create or review quizzes connected to this specific course.",
-    items: ["Generated quizzes", "Manual quiz editing", "Quiz results per learner"],
-  },
-  assignments: {
-    title: "Assignments",
-    description: "This area should keep course assignments separate from other courses.",
-    items: ["Assignment list", "Submission overview", "Due dates"],
-  },
-  classes: {
-    title: "Classes & Students",
-    description:
-      "This area should show the classes opened under this course and the learners inside them.",
-    items: ["Class groups", "Enrolled students", "Invite or connection requests"],
-  },
-  analytics: {
-    title: "Student Analytics",
-    description: "This area should summarize course-level student performance for the tutor.",
-    items: ["Quiz averages", "Assignment progress", "Engagement overview"],
-  },
-  weakness: {
-    title: "Weakness Analysis",
-    description:
-      "This area should show what learners are struggling with after quizzes and assignments.",
-    items: ["Weak topics", "Students needing support", "Suggested review material"],
-  },
-  requests: {
-    title: "Requests",
-    description: "This area should collect learner requests related to this course.",
-    items: ["Join requests", "Tutor connection requests", "Course help requests"],
-  },
-};
 
 function formatFileSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
@@ -200,7 +132,7 @@ function CourseDetailPage() {
   return (
     <TutorLayout
       title={courseQuery.data?.title ?? "Course Workspace"}
-      subtitle="Open a course first, then manage its resources, quizzes, students, and analysis from one place."
+      subtitle="Manage the course details and the PDFs learners use for AI chat, quizzes, and flashcards."
       actions={
         <Button asChild variant="outline">
           <Link to="/tutor/courses">
@@ -262,10 +194,6 @@ function CourseDetailPage() {
               deleteResourceMutation={deleteResourceMutation}
               resourcesQuery={resourcesQuery}
             />
-          )}
-
-          {activeSection !== "overview" && activeSection !== "resources" && (
-            <CoursePlaceholderSection {...sectionCopy[activeSection]} />
           )}
         </div>
       </div>
@@ -661,33 +589,3 @@ function DeleteResourceDialog({
   );
 }
 
-function CoursePlaceholderSection({
-  title,
-  description,
-  items,
-}: {
-  title: string;
-  description: string;
-  items: string[];
-}) {
-  return (
-    <Card className="shadow-soft">
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="max-w-2xl text-sm text-muted-foreground">{description}</p>
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          {items.map((item) => (
-            <div key={item} className="rounded-lg border border-dashed bg-secondary/30 p-4">
-              <div className="text-sm font-semibold">{item}</div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Course-specific UI area ready for backend wiring.
-              </p>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
