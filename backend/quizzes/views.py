@@ -144,3 +144,25 @@ class SubmitQuizAttemptView(APIView):
         attempt = QuizAttempt.objects.prefetch_related("answers__question").get(pk=attempt.pk)
         serializer = QuizAttemptResultSerializer(attempt)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class QuizAttemptDetailView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, attempt_pk):
+        attempts = QuizAttempt.objects.select_related(
+            "student",
+            "quiz",
+            "quiz__course",
+        ).prefetch_related("answers__question")
+
+        if request.user.role == "student":
+            attempts = attempts.filter(student=request.user)
+        elif request.user.role == "teacher":
+            attempts = attempts.filter(quiz__course__teacher=request.user)
+        else:
+            attempts = attempts.none()
+
+        attempt = get_object_or_404(attempts, pk=attempt_pk)
+        serializer = QuizAttemptResultSerializer(attempt)
+        return Response(serializer.data, status=status.HTTP_200_OK)

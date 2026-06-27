@@ -114,6 +114,30 @@ export interface AuthUser {
   created_at: string;
 }
 
+export interface UserProfile extends AuthUser {
+  grade_level?: string;
+  weakness_summary?: string | null;
+  bio?: string;
+  teaching_style_summary?: string | null;
+  ai_instructions?: string | null;
+  updated_at?: string;
+}
+
+export type UpdateProfileInput = Partial<
+  Pick<
+    UserProfile,
+    | "email"
+    | "first_name"
+    | "last_name"
+    | "gender"
+    | "phone"
+    | "grade_level"
+    | "bio"
+    | "teaching_style_summary"
+    | "ai_instructions"
+  >
+>;
+
 interface AuthTokens {
   access: string;
   refresh: string;
@@ -280,6 +304,79 @@ export interface WeaknessReport {
   generated_at: string;
 }
 
+export interface TutorAnalyticsOverview {
+  summary: {
+    course_count: number;
+    active_course_count: number;
+    student_count: number;
+    resource_count: number;
+    quiz_count: number;
+    quiz_attempt_count: number;
+    average_score: number | null;
+    best_score: number | null;
+    weak_topic_count: number;
+    chat_session_count: number;
+    student_chat_message_count: number;
+    flashcard_set_count: number;
+  };
+  course_activity: Array<{
+    id: number;
+    title: string;
+    status: CourseStatus;
+    student_count: number;
+    quiz_count: number;
+    attempt_count: number;
+    average_score: number | null;
+    weak_topic_count: number;
+  }>;
+  recent_attempts: Array<{
+    id: number;
+    student_name: string;
+    course_title: string;
+    quiz_title: string;
+    score: number;
+    attempted_at: string;
+  }>;
+  recent_reports: Array<{
+    id: number;
+    student_name: string;
+    course_title: string;
+    weak_topic_count: number;
+    generated_at: string;
+  }>;
+}
+
+export interface LearnerAnalyticsOverview {
+  summary: {
+    enrolled_course_count: number;
+    quiz_attempt_count: number;
+    average_score: number | null;
+    best_score: number | null;
+    flashcard_set_count: number;
+    flashcard_card_count: number;
+    chat_session_count: number;
+    student_chat_message_count: number;
+  };
+  course_progress: Array<{
+    id: number;
+    title: string;
+    teacher_name: string;
+    quiz_count: number;
+    attempt_count: number;
+    best_score: number | null;
+    average_score: number | null;
+    flashcard_set_count: number;
+    chat_session_count: number;
+  }>;
+  recent_attempts: Array<{
+    id: number;
+    course_title: string;
+    quiz_title: string;
+    score: number;
+    attempted_at: string;
+  }>;
+}
+
 export interface CourseChatSource {
   resource_id: number;
   file_name: string;
@@ -313,6 +410,25 @@ export function register(input: RegisterInput) {
 
 export function getCurrentUser() {
   return apiRequest<AuthUser>("/api/auth/me/");
+}
+
+export function getProfile() {
+  return apiRequest<UserProfile>("/api/auth/profile/");
+}
+
+export function updateProfile(input: UpdateProfileInput) {
+  return apiRequest<UserProfile>("/api/auth/profile/", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getTutorAnalyticsOverview() {
+  return apiRequest<TutorAnalyticsOverview>("/api/analytics/tutor/overview/");
+}
+
+export function getLearnerAnalyticsOverview() {
+  return apiRequest<LearnerAnalyticsOverview>("/api/analytics/learner/overview/");
 }
 
 export function listCourses() {
@@ -400,6 +516,10 @@ export function listCourseWeaknessReports(courseId: number) {
   return apiRequest<WeaknessReport[]>(`/api/analytics/courses/${courseId}/weakness-reports/`);
 }
 
+export function getWeaknessReport(reportId: number) {
+  return apiRequest<WeaknessReport>(`/api/analytics/weakness-reports/${reportId}/`);
+}
+
 export function generateCourseWeaknessReports(courseId: number, studentId?: number) {
   return apiRequest<WeaknessReport[]>(
     `/api/analytics/courses/${courseId}/weakness-reports/generate/`,
@@ -468,6 +588,8 @@ export interface QuizSummary {
   question_count: number;
   attempt_count: number;
   best_score: number | null;
+  latest_attempt_id: number | null;
+  latest_attempt_at: string | null;
   created_at: string;
 }
 
@@ -500,6 +622,11 @@ export interface QuizAttemptAnswer {
 export interface QuizAttemptResult {
   id: number;
   quiz_id: number;
+  quiz_title: string;
+  course_id: number;
+  course_title: string;
+  student_id: number;
+  student_name: string;
   score: number;
   attempted_at: string;
   answers: QuizAttemptAnswer[];
@@ -567,6 +694,10 @@ export function submitQuizAttempt(quizId: number, answers: QuizAnswerSubmission[
     method: "POST",
     body: JSON.stringify({ answers }),
   });
+}
+
+export function getQuizAttempt(attemptId: number) {
+  return apiRequest<QuizAttemptResult>(`/api/quizzes/attempts/${attemptId}/`);
 }
 
 export function listFlashcardSets() {

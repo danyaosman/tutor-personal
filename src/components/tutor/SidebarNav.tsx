@@ -1,8 +1,10 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
+  BarChart3,
   BookOpen,
   Sparkles,
   LogOut,
+  Settings,
 } from "lucide-react";
 import { clearSession } from "@/lib/api";
 import { currentUserQueryKey, useCurrentUser } from "@/hooks/use-current-user";
@@ -10,6 +12,8 @@ import { useQueryClient } from "@tanstack/react-query";
 
 const nav = [
   { to: "/tutor/courses", label: "Courses", icon: BookOpen },
+  { to: "/tutor/analytics", label: "Analytics", icon: BarChart3 },
+  { to: "/tutor/settings", label: "Settings", icon: Settings },
 ] as const;
 
 export function SidebarNav() {

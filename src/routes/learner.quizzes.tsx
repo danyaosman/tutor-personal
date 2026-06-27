@@ -25,13 +25,14 @@ import {
 } from "@/components/ui/table";
 import {
   getQuiz,
+  getQuizAttempt,
   listEnrolledCourses,
   listQuizzes,
   submitQuizAttempt,
   type QuizAttemptResult,
   type QuizDetail,
 } from "@/lib/api";
-import { CheckCircle2, Loader2, Play, RotateCcw, XCircle } from "lucide-react";
+import { CheckCircle2, Eye, Loader2, Play, RotateCcw, XCircle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -48,6 +49,7 @@ export const Route = createFileRoute("/learner/quizzes")({
 function LearnerQuizzes() {
   const queryClient = useQueryClient();
   const [activeQuizId, setActiveQuizId] = useState<number | null>(null);
+  const [previousAttemptId, setPreviousAttemptId] = useState<number | null>(null);
   const [selectedCourseId, setSelectedCourseId] = useState("all");
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [result, setResult] = useState<QuizAttemptResult | null>(null);
@@ -66,6 +68,12 @@ function LearnerQuizzes() {
     queryKey: ["learner-quiz-detail", activeQuizId],
     queryFn: () => getQuiz(activeQuizId ?? 0),
     enabled: Boolean(activeQuizId),
+  });
+
+  const previousAttemptQuery = useQuery({
+    queryKey: ["quiz-attempt", previousAttemptId],
+    queryFn: () => getQuizAttempt(previousAttemptId ?? 0),
+    enabled: previousAttemptId !== null,
   });
 
   const submitMutation = useMutation({
@@ -194,18 +202,29 @@ function LearnerQuizzes() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        className="gradient-ai text-white shadow-glow"
-                        onClick={() => setActiveQuizId(quiz.id)}
-                      >
-                        {completed ? (
-                          <RotateCcw className="h-3.5 w-3.5" />
-                        ) : (
-                          <Play className="h-3.5 w-3.5" />
+                      <div className="flex flex-wrap justify-end gap-2">
+                        {quiz.latest_attempt_id !== null && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setPreviousAttemptId(quiz.latest_attempt_id)}
+                          >
+                            <Eye className="h-3.5 w-3.5" /> View Previous
+                          </Button>
                         )}
-                        {completed ? "Retake" : "Start"}
-                      </Button>
+                        <Button
+                          size="sm"
+                          className="gradient-ai text-white shadow-glow"
+                          onClick={() => setActiveQuizId(quiz.id)}
+                        >
+                          {completed ? (
+                            <RotateCcw className="h-3.5 w-3.5" />
+                          ) : (
+                            <Play className="h-3.5 w-3.5" />
+                          )}
+                          {completed ? "Retake" : "Start"}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -339,6 +358,104 @@ function LearnerQuizzes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog
+        open={previousAttemptId !== null}
+        onOpenChange={(open) => {
+          if (!open) setPreviousAttemptId(null);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Previous Attempt</DialogTitle>
+          </DialogHeader>
+
+          {previousAttemptQuery.isPending && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading attempt...
+            </div>
+          )}
+
+          {previousAttemptQuery.error && (
+            <Alert variant="destructive">
+              <AlertDescription>{previousAttemptQuery.error.message}</AlertDescription>
+            </Alert>
+          )}
+
+          {previousAttemptQuery.data && (
+            <div className="space-y-5">
+              <div className="rounded-xl border bg-muted/30 p-5">
+                <div className="text-sm font-semibold">{previousAttemptQuery.data.quiz_title}</div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {previousAttemptQuery.data.course_title}
+                </div>
+                <div className="mt-3 text-3xl font-bold">{previousAttemptQuery.data.score}%</div>
+              </div>
+
+              {previousAttemptQuery.data.answers.map((answer, index) => {
+                const selectedChoice = answer.question.options.find(
+                  (option) => option.key === answer.selected_option,
+                );
+                const correctChoice = answer.question.options.find(
+                  (option) => option.key === answer.question.correct_option,
+                );
+
+                return (
+                  <div key={answer.question.id} className="rounded-xl border p-4">
+                    <div className="flex items-start gap-2">
+                      {answer.is_correct ? (
+                        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+                      ) : (
+                        <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-semibold text-muted-foreground">
+                          Question {index + 1}
+                        </div>
+                        <div className="mt-1 font-semibold">{answer.question.question_text}</div>
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                          <AnswerBox
+                            label="Your answer"
+                            value={
+                              answer.selected_option
+                                ? `${answer.selected_option} - ${selectedChoice?.text ?? ""}`
+                                : "No answer"
+                            }
+                          />
+                          <AnswerBox
+                            label="Correct answer"
+                            value={`${answer.question.correct_option} - ${
+                              correctChoice?.text ?? ""
+                            }`}
+                          />
+                        </div>
+                        <p className="mt-3 text-sm text-muted-foreground">
+                          {answer.question.explanation}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviousAttemptId(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </LearnerLayout>
+  );
+}
+
+function AnswerBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-muted/40 p-3">
+      <div className="text-xs font-semibold text-muted-foreground">{label}</div>
+      <div className="mt-1 text-sm font-medium">{value}</div>
+    </div>
   );
 }

@@ -127,3 +127,69 @@ class AuthenticationAPITests(APITestCase):
         response = self.client.get(reverse("me"))
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_student_profile_returns_and_updates_student_fields(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(reverse("profile"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["role"], User.STUDENT)
+        self.assertEqual(response.data["grade_level"], "10")
+        self.assertNotIn("bio", response.data)
+
+        update_response = self.client.patch(
+            reverse("profile"),
+            {
+                "first_name": "Updated",
+                "grade_level": "12",
+                "bio": "Ignored student bio",
+            },
+            format="json",
+        )
+
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, "Updated")
+        self.user.student_profile.refresh_from_db()
+        self.assertEqual(self.user.student_profile.grade_level, "12")
+        self.assertFalse(hasattr(self.user, "teacher_profile"))
+
+    def test_teacher_profile_returns_and_updates_teacher_fields(self):
+        teacher = User.objects.create_user(
+            username="settings-teacher",
+            email="settings-teacher@example.com",
+            password=self.password,
+            role=User.TEACHER,
+        )
+        TeacherProfile.objects.create(user=teacher, bio="Original bio")
+        self.client.force_authenticate(user=teacher)
+
+        response = self.client.get(reverse("profile"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["role"], User.TEACHER)
+        self.assertEqual(response.data["bio"], "Original bio")
+        self.assertNotIn("grade_level", response.data)
+
+        update_response = self.client.patch(
+            reverse("profile"),
+            {
+                "bio": "Updated bio",
+                "teaching_style_summary": "Socratic and concise.",
+                "ai_instructions": "Prefer examples from course PDFs.",
+                "grade_level": "Ignored teacher grade",
+            },
+            format="json",
+        )
+
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        teacher.teacher_profile.refresh_from_db()
+        self.assertEqual(teacher.teacher_profile.bio, "Updated bio")
+        self.assertEqual(teacher.teacher_profile.teaching_style_summary, "Socratic and concise.")
+        self.assertEqual(teacher.teacher_profile.ai_instructions, "Prefer examples from course PDFs.")
+
+    def test_profile_rejects_unauthenticated_request(self):
+        response = self.client.get(reverse("profile"))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

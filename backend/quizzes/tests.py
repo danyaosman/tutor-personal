@@ -59,6 +59,35 @@ class QuizAPITests(APITestCase):
         self.classroom = Classroom.objects.create(course=self.course, name="Default Class")
         ClassroomEnrollment.objects.create(student=self.student, classroom=self.classroom)
 
+    def create_attempt(self, student=None, course=None):
+        quiz = Quiz.objects.create(
+            course=course or self.course,
+            title="Python Practice",
+            difficulty_level="medium",
+        )
+        question = QuizQuestion.objects.create(
+            quiz=quiz,
+            question_text="Which option describes a variable?",
+            options=[
+                {"key": "A", "text": "Stores a value."},
+                {"key": "B", "text": "Deletes the program."},
+            ],
+            correct_option="A",
+            explanation="Variables store values.",
+        )
+        attempt = QuizAttempt.objects.create(
+            student=student or self.student,
+            quiz=quiz,
+            score=100,
+        )
+        QuizAnswer.objects.create(
+            attempt=attempt,
+            question=question,
+            selected_option="A",
+            is_correct=True,
+        )
+        return attempt
+
     def test_student_generates_quiz_from_enrolled_course(self):
         self.client.force_authenticate(user=self.student)
 
@@ -128,6 +157,24 @@ class QuizAPITests(APITestCase):
         self.assertEqual(detail_response.status_code, status.HTTP_200_OK)
         self.assertNotIn("correct_option", detail_response.data["questions"][0])
 
+    def test_student_quiz_list_includes_only_latest_attempt_pointer(self):
+        quiz = Quiz.objects.create(
+            course=self.course,
+            title="Python Practice",
+            difficulty_level="medium",
+        )
+        first_attempt = QuizAttempt.objects.create(student=self.student, quiz=quiz, score=25)
+        latest_attempt = QuizAttempt.objects.create(student=self.student, quiz=quiz, score=75)
+        self.client.force_authenticate(user=self.student)
+
+        response = self.client.get(reverse("learner-quiz-list"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data[0]["attempt_count"], 2)
+        self.assertEqual(response.data[0]["latest_attempt_id"], latest_attempt.id)
+        self.assertNotEqual(response.data[0]["latest_attempt_id"], first_attempt.id)
+        self.assertIn("latest_attempt_at", response.data[0])
+
     def test_student_submits_quiz_attempt_and_receives_results(self):
         quiz = Quiz.objects.create(
             course=self.course,
@@ -170,3 +217,63 @@ class QuizAPITests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_student_views_own_quiz_attempt_detail(self):
+        attempt = self.create_attempt()
+        self.client.force_authenticate(user=self.student)
+
+        response = self.client.get(
+            reverse("quiz-attempt-detail", kwargs={"attempt_pk": attempt.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], attempt.id)
+        self.assertEqual(response.data["quiz_title"], "Python Practice")
+        self.assertEqual(response.data["course_title"], self.course.title)
+        self.assertEqual(response.data["student_id"], self.student.id)
+        self.assertEqual(response.data["answers"][0]["question"]["correct_option"], "A")
+
+    def test_student_cannot_view_other_students_quiz_attempt_detail(self):
+        attempt = self.create_attempt(student=self.other_student)
+        self.client.force_authenticate(user=self.student)
+
+        response = self.client.get(
+            reverse("quiz-attempt-detail", kwargs={"attempt_pk": attempt.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_teacher_views_owned_course_quiz_attempt_detail(self):
+        attempt = self.create_attempt()
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.get(
+            reverse("quiz-attempt-detail", kwargs={"attempt_pk": attempt.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["student_name"], self.student.username)
+        self.assertEqual(response.data["score"], 100)
+
+    def test_teacher_cannot_view_another_teachers_quiz_attempt_detail(self):
+        other_teacher = User.objects.create_user(
+            username="quiz-other-tutor",
+            password="StrongPassword123!",
+            role=User.TEACHER,
+        )
+        other_course = Course.objects.create(
+            teacher=other_teacher,
+            title="Hidden Course",
+            description="Hidden.",
+            subject="Math",
+            grade_level="10",
+            status="active",
+        )
+        attempt = self.create_attempt(course=other_course)
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.get(
+            reverse("quiz-attempt-detail", kwargs={"attempt_pk": attempt.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

@@ -991,8 +991,8 @@ function WeaknessReportPanel({
                   <h4 className="text-sm font-semibold">{topic.topic}</h4>
                 </div>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-lg bg-destructive/5 p-3">
-                    <div className="text-xs font-semibold text-muted-foreground">
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-950">
+                    <div className="text-xs font-semibold text-red-700">
                       Selected Choice
                     </div>
                     <div className="mt-1 text-sm font-medium">
@@ -1005,8 +1005,8 @@ function WeaknessReportPanel({
                         : "Not answered"}
                     </div>
                   </div>
-                  <div className="rounded-lg bg-emerald-500/10 p-3">
-                    <div className="text-xs font-semibold text-muted-foreground">
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-950">
+                    <div className="text-xs font-semibold text-emerald-700">
                       Correct Choice
                     </div>
                     <div className="mt-1 text-sm font-medium">
@@ -1375,4 +1375,3 @@ function DeleteResourceDialog({
     </AlertDialog>
   );
 }
-

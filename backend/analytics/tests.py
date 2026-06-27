@@ -3,7 +3,9 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from courses.models import Classroom, ClassroomEnrollment, Course
+from ai_tutor.models import ChatMessage, ChatSession
+from courses.models import Classroom, ClassroomEnrollment, Course, CourseResource
+from flashcards.models import Flashcard, FlashcardSet
 from quizzes.models import Quiz, QuizAnswer, QuizAttempt, QuizQuestion
 
 from .models import WeaknessReport
@@ -144,6 +146,47 @@ class WeaknessReportAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual([item["id"] for item in response.data], [report.id])
 
+    def test_teacher_views_owned_weakness_report_detail(self):
+        report = WeaknessReport.objects.create(
+            student=self.student,
+            course=self.course,
+            weakness_summary="Needs practice on genetics.",
+            weak_topics=[{"topic": "Genetics"}],
+        )
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.get(
+            reverse("weakness-report-detail", kwargs={"report_pk": report.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], report.id)
+        self.assertEqual(response.data["weakness_summary"], "Needs practice on genetics.")
+        self.assertEqual(response.data["weak_topics"], [{"topic": "Genetics"}])
+
+    def test_teacher_cannot_view_another_teachers_weakness_report_detail(self):
+        other_classroom = Classroom.objects.create(
+            course=self.other_course,
+            name="Other Class",
+        )
+        ClassroomEnrollment.objects.create(
+            student=self.other_student,
+            classroom=other_classroom,
+        )
+        report = WeaknessReport.objects.create(
+            student=self.other_student,
+            course=self.other_course,
+            weakness_summary="Hidden report.",
+            weak_topics=[{"topic": "Geometry"}],
+        )
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.get(
+            reverse("weakness-report-detail", kwargs={"report_pk": report.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_teacher_generates_empty_state_report_when_student_has_no_attempts(self):
         self.client.force_authenticate(user=self.teacher)
 
@@ -198,3 +241,122 @@ class WeaknessReportAPITests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_tutor_overview_returns_owned_course_activity(self):
+        self.create_quiz_attempt_with_wrong_answer()
+        WeaknessReport.objects.create(
+            student=self.student,
+            course=self.course,
+            weakness_summary="Needs genetics practice.",
+            weak_topics=[{"topic": "DNA"}],
+        )
+        CourseResource.objects.create(
+            course=self.course,
+            file_name="biology.pdf",
+            file="course_resources/biology.pdf",
+            file_size=123,
+            processing_status="completed",
+        )
+        chat_session = ChatSession.objects.create(student=self.student, course=self.course)
+        ChatMessage.objects.create(
+            session=chat_session,
+            sender="student",
+            message_text="What is DNA?",
+        )
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.get(reverse("tutor-analytics-overview"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["summary"]["course_count"], 1)
+        self.assertEqual(response.data["summary"]["student_count"], 1)
+        self.assertEqual(response.data["summary"]["quiz_attempt_count"], 1)
+        self.assertEqual(response.data["summary"]["average_score"], 50.0)
+        self.assertEqual(response.data["summary"]["weak_topic_count"], 1)
+        self.assertEqual(response.data["summary"]["student_chat_message_count"], 1)
+        self.assertEqual(response.data["course_activity"][0]["title"], self.course.title)
+
+    def test_tutor_overview_limits_recent_activity_to_three_items(self):
+        quiz = Quiz.objects.create(
+            course=self.course,
+            title="Recent Activity Quiz",
+            difficulty_level="medium",
+        )
+        for index in range(4):
+            QuizAttempt.objects.create(
+                student=self.student,
+                quiz=quiz,
+                score=50 + index,
+            )
+            WeaknessReport.objects.create(
+                student=self.student,
+                course=self.course,
+                weakness_summary=f"Report {index}",
+                weak_topics=[{"topic": f"Topic {index}"}],
+            )
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.get(reverse("tutor-analytics-overview"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["recent_attempts"]), 3)
+        self.assertEqual(len(response.data["recent_reports"]), 3)
+
+    def test_student_cannot_access_tutor_overview(self):
+        self.client.force_authenticate(user=self.student)
+
+        response = self.client.get(reverse("tutor-analytics-overview"))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_learner_overview_returns_own_activity(self):
+        self.create_quiz_attempt_with_wrong_answer()
+        card_set = FlashcardSet.objects.create(
+            student=self.student,
+            course=self.course,
+            title="Biology Cards",
+        )
+        Flashcard.objects.create(set=card_set, front="DNA", back="Genetic material")
+        chat_session = ChatSession.objects.create(student=self.student, course=self.course)
+        ChatMessage.objects.create(
+            session=chat_session,
+            sender="student",
+            message_text="Summarize genetics.",
+        )
+        self.client.force_authenticate(user=self.student)
+
+        response = self.client.get(reverse("learner-analytics-overview"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["summary"]["enrolled_course_count"], 1)
+        self.assertEqual(response.data["summary"]["quiz_attempt_count"], 1)
+        self.assertEqual(response.data["summary"]["best_score"], 50)
+        self.assertEqual(response.data["summary"]["flashcard_card_count"], 1)
+        self.assertEqual(response.data["summary"]["student_chat_message_count"], 1)
+        self.assertEqual(response.data["course_progress"][0]["title"], self.course.title)
+
+    def test_learner_overview_limits_recent_attempts_to_three_items(self):
+        quiz = Quiz.objects.create(
+            course=self.course,
+            title="Learner Recent Quiz",
+            difficulty_level="medium",
+        )
+        for index in range(4):
+            QuizAttempt.objects.create(
+                student=self.student,
+                quiz=quiz,
+                score=60 + index,
+            )
+        self.client.force_authenticate(user=self.student)
+
+        response = self.client.get(reverse("learner-analytics-overview"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["recent_attempts"]), 3)
+
+    def test_teacher_cannot_access_learner_overview(self):
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.get(reverse("learner-analytics-overview"))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

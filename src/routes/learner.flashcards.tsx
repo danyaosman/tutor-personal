@@ -215,9 +215,7 @@ function LearnerFlashcards() {
                     >
                       <ArrowLeft className="h-4 w-4" /> Previous
                     </Button>
-                    <Button variant="outline" onClick={() => setIsFlipped(false)}>
-                      <RotateCcw className="h-4 w-4" /> Front
-                    </Button>
+
                     <Button
                       onClick={showNextCard}
                       disabled={activeCardIndex >= cards.length - 1}
