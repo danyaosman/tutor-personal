@@ -2,6 +2,8 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   BarChart3,
   BookOpen,
+  Brain,
+  FileText,
   Sparkles,
   LogOut,
   Settings,
@@ -13,6 +15,8 @@ import { useQueryClient } from "@tanstack/react-query";
 const nav = [
   { to: "/tutor/courses", label: "Courses", icon: BookOpen },
   { to: "/tutor/analytics", label: "Analytics", icon: BarChart3 },
+  { to: "/tutor/syllabus", label: "Syllabus", icon: FileText },
+  { to: "/tutor/digital-twin", label: "Digital Twin", icon: Brain },
   { to: "/tutor/settings", label: "Settings", icon: Settings },
 ] as const;
 

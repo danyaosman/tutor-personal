@@ -23,6 +23,7 @@ import {
   type CourseResource,
 } from "@/lib/api";
 import {
+  ArrowDown,
   ArrowLeft,
   Bot,
   Brain,
@@ -58,6 +59,9 @@ const processSteps = [
   "Preparing a grounded answer...",
 ];
 
+const CHAT_STICKY_BOTTOM_THRESHOLD = 96;
+const CHAT_JUMP_BUTTON_THRESHOLD = 260;
+
 function LearnerCourseNotebook() {
   const { courseId: courseIdParam } = Route.useParams();
   const courseId = Number(courseIdParam);
@@ -76,11 +80,14 @@ function LearnerCourseNotebook() {
   const [streamingAnswer, setStreamingAnswer] = useState("");
   const [streamingSources, setStreamingSources] = useState<CourseChatResponse["sources"]>([]);
   const [selectedSource, setSelectedSource] = useState<CourseChatSource | null>(null);
+  const [selectedSourceMessageId, setSelectedSourceMessageId] = useState<string | null>(null);
   const [studyToolMessage, setStudyToolMessage] = useState("");
+  const [showJumpToEnd, setShowJumpToEnd] = useState(false);
 
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
-  const chatEndRef = useRef<HTMLDivElement | null>(null);
   const streamTimerRef = useRef<ReturnType<typeof window.setInterval> | null>(null);
+  const chatScrollFrameRef = useRef<number | null>(null);
+  const shouldStickToBottomRef = useRef(true);
 
   const enrolledCoursesQuery = useQuery({
     queryKey: ["enrolled-courses"],
@@ -154,19 +161,49 @@ function LearnerCourseNotebook() {
       if (streamTimerRef.current) {
         window.clearInterval(streamTimerRef.current);
       }
+      if (chatScrollFrameRef.current) {
+        window.cancelAnimationFrame(chatScrollFrameRef.current);
+      }
     };
   }, []);
 
   useEffect(() => {
-    const scrollFrame = window.requestAnimationFrame(() => {
-      chatEndRef.current?.scrollIntoView({
-        block: "end",
-        behavior: "smooth",
-      });
-    });
-
-    return () => window.cancelAnimationFrame(scrollFrame);
+    scrollChatToBottom();
   }, [messages.length, streamingAnswer, activeSteps.length]);
+
+  function getChatBottomDistance(chatElement: HTMLDivElement) {
+    return chatElement.scrollHeight - chatElement.scrollTop - chatElement.clientHeight;
+  }
+
+  function updateChatScrollState() {
+    const chatElement = chatScrollRef.current;
+    if (!chatElement) return;
+
+    const bottomDistance = getChatBottomDistance(chatElement);
+    shouldStickToBottomRef.current = bottomDistance <= CHAT_STICKY_BOTTOM_THRESHOLD;
+    setShowJumpToEnd(bottomDistance > CHAT_JUMP_BUTTON_THRESHOLD);
+  }
+
+  function scrollChatToBottom(force = false) {
+    if (!force && !shouldStickToBottomRef.current) {
+      const chatElement = chatScrollRef.current;
+      if (chatElement) setShowJumpToEnd(getChatBottomDistance(chatElement) > CHAT_JUMP_BUTTON_THRESHOLD);
+      return;
+    }
+
+    if (chatScrollFrameRef.current) {
+      window.cancelAnimationFrame(chatScrollFrameRef.current);
+    }
+
+    chatScrollFrameRef.current = window.requestAnimationFrame(() => {
+      const chatElement = chatScrollRef.current;
+      if (!chatElement) return;
+      chatElement.scrollTop = chatElement.scrollHeight;
+      shouldStickToBottomRef.current = true;
+      setShowJumpToEnd(false);
+      chatScrollFrameRef.current = null;
+    });
+  }
 
   function animateAnswer(answer: string, sources: CourseChatResponse["sources"]) {
     if (streamTimerRef.current) {
@@ -218,8 +255,11 @@ function LearnerCourseNotebook() {
 
       const session = await getChatSession(sessionId);
 
+      shouldStickToBottomRef.current = true;
+      setShowJumpToEnd(false);
       setActiveSessionId(session.id);
       setSelectedSource(null);
+      setSelectedSourceMessageId(null);
       setStreamingAnswer("");
       setStreamingSources([]);
       setActiveSteps([]);
@@ -251,11 +291,14 @@ function LearnerCourseNotebook() {
     setActiveSessionId(null);
     setMessages([]);
     setSelectedSource(null);
+    setSelectedSourceMessageId(null);
     setStreamingAnswer("");
     setStreamingSources([]);
     setActiveSteps([]);
     setQuestion("");
     setSessionLoadError("");
+    shouldStickToBottomRef.current = true;
+    setShowJumpToEnd(false);
   }
 
   function submitQuestion() {
@@ -277,8 +320,16 @@ function LearnerCourseNotebook() {
     setQuestion("");
     setActiveSteps(processSteps);
     setSelectedSource(null);
+    setSelectedSourceMessageId(null);
     setSessionLoadError("");
+    shouldStickToBottomRef.current = true;
+    scrollChatToBottom(true);
     chatMutation.mutate(trimmedQuestion);
+  }
+
+  function selectMessageSource(messageId: string, source: CourseChatSource) {
+    setSelectedSource(source);
+    setSelectedSourceMessageId(messageId);
   }
 
   return (
@@ -562,60 +613,75 @@ function LearnerCourseNotebook() {
               </CardHeader>
 
               <CardContent className="flex h-[calc(100%-76px)] min-h-0 flex-col">
-                <div
-                  ref={chatScrollRef}
-                  className="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-xl border bg-secondary/20 p-4"
-                >
-                  {messages.length === 0 && !streamingAnswer && activeSteps.length === 0 && (
-                    <div className="grid min-h-[300px] place-items-center text-center">
-                      <div>
-                        <Bot className="mx-auto h-10 w-10 text-muted-foreground" />
-                        <h3 className="mt-3 font-semibold">Ask about this course</h3>
-                        <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                          The AI tutor will search the course PDFs and answer using the most
-                          relevant extracted chunks.
-                        </p>
+                <div className="relative min-h-0 flex-1">
+                  <div
+                    ref={chatScrollRef}
+                    onScroll={updateChatScrollState}
+                    className="h-full min-h-0 space-y-4 overflow-y-auto overscroll-contain rounded-xl border bg-secondary/20 p-4 [overflow-anchor:none]"
+                  >
+                    {messages.length === 0 && !streamingAnswer && activeSteps.length === 0 && (
+                      <div className="grid min-h-[300px] place-items-center text-center">
+                        <div>
+                          <Bot className="mx-auto h-10 w-10 text-muted-foreground" />
+                          <h3 className="mt-3 font-semibold">Ask about this course</h3>
+                          <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                            The AI tutor will search the course PDFs and answer using the most
+                            relevant extracted chunks.
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {messages.map((message) => (
-                    <ChatMessageBubble
-                      key={message.id}
-                      message={message}
-                      selectedSource={selectedSource}
-                      onSelectSource={setSelectedSource}
-                    />
-                  ))}
+                    {messages.map((message) => (
+                      <ChatMessageBubble
+                        key={message.id}
+                        message={message}
+                        selectedSource={selectedSource}
+                        selectedSourceMessageId={selectedSourceMessageId}
+                        onSelectSource={selectMessageSource}
+                      />
+                    ))}
 
-                  {activeSteps.length > 0 && (
-                    <div className="rounded-xl border bg-background p-4">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                        <Loader2 className="h-4 w-4 animate-spin" /> AI tutor is working
+                    {activeSteps.length > 0 && (
+                      <div className="rounded-xl border bg-background p-4">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                          <Loader2 className="h-4 w-4 animate-spin" /> AI tutor is working
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          {activeSteps.map((step) => (
+                            <div key={step} className="text-sm text-muted-foreground">
+                              {step}
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <div className="mt-3 space-y-2">
-                        {activeSteps.map((step) => (
-                          <div key={step} className="text-sm text-muted-foreground">
-                            {step}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    )}
 
-                  {streamingAnswer && (
-                    <ChatMessageBubble
-                      message={{
-                        id: "streaming-answer",
-                        role: "ai",
-                        text: streamingAnswer,
-                        sources: streamingSources,
-                      }}
-                      selectedSource={selectedSource}
-                      onSelectSource={setSelectedSource}
-                    />
+                    {streamingAnswer && (
+                      <ChatMessageBubble
+                        message={{
+                          id: "streaming-answer",
+                          role: "ai",
+                          text: streamingAnswer,
+                          sources: streamingSources,
+                        }}
+                        selectedSource={selectedSource}
+                        selectedSourceMessageId={selectedSourceMessageId}
+                        onSelectSource={selectMessageSource}
+                      />
+                    )}
+                  </div>
+                  {showJumpToEnd && !streamingAnswer && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="absolute bottom-4 right-4 shadow-soft"
+                      onClick={() => scrollChatToBottom(true)}
+                    >
+                      <ArrowDown className="h-4 w-4" /> Go to end
+                    </Button>
                   )}
-                  <div ref={chatEndRef} />
                 </div>
 
                 {chatMutation.error && (
@@ -758,13 +824,20 @@ function sourceKey(source: CourseChatSource) {
 function ChatMessageBubble({
   message,
   selectedSource,
+  selectedSourceMessageId,
   onSelectSource,
 }: {
   message: ChatBubble;
   selectedSource: CourseChatSource | null;
-  onSelectSource: (source: CourseChatSource) => void;
+  selectedSourceMessageId: string | null;
+  onSelectSource: (messageId: string, source: CourseChatSource) => void;
 }) {
   const isStudent = message.role === "student";
+  const [showAllCitations, setShowAllCitations] = useState(false);
+  const citationPreviewCount = 4;
+  const sources = message.sources ?? [];
+  const visibleSources = showAllCitations ? sources : sources.slice(0, citationPreviewCount);
+  const hiddenCitationCount = Math.max(0, sources.length - citationPreviewCount);
 
   return (
     <div className={["flex", isStudent ? "justify-end" : "justify-start"].join(" ")}>
@@ -781,35 +854,57 @@ function ChatMessageBubble({
 
         <div className="whitespace-pre-wrap">{message.text}</div>
 
-        {!isStudent && message.sources && message.sources.length > 0 && (
-          <div className="mt-4 space-y-2">
-            <div className="text-xs font-semibold text-muted-foreground">Sources</div>
+        {!isStudent && sources.length > 0 && (
+          <div className="mt-4 rounded-lg border bg-secondary/20 p-2">
+            <div className="mb-2 text-xs font-semibold text-muted-foreground">Citations</div>
+            <div className="flex flex-wrap gap-2">
+              {visibleSources.map((source, index) => {
+                const active =
+                  selectedSourceMessageId === message.id &&
+                  selectedSource &&
+                  sourceKey(selectedSource) === sourceKey(source);
+                return (
+                  <button
+                    key={sourceKey(source)}
+                    type="button"
+                    title={`${source.file_name}${source.page_number ? `, page ${source.page_number}` : ""}`}
+                    onClick={() => onSelectSource(message.id, source)}
+                    className={[
+                      "rounded-md border px-2 py-1 text-xs font-semibold transition hover:border-amber-400 hover:bg-amber-50 hover:text-amber-950",
+                      active
+                        ? "border-amber-400 bg-amber-100 text-amber-950"
+                        : "bg-background text-foreground",
+                    ].join(" ")}
+                  >
+                    [{index + 1}]
+                  </button>
+                );
+              })}
 
-            {message.sources.map((source) => (
-              <button
-                key={sourceKey(source)}
-                type="button"
-                onClick={() => onSelectSource(source)}
-                className={[
-                  "w-full rounded-lg border p-3 text-left transition hover:border-amber-400 hover:bg-amber-50",
-                  selectedSource && sourceKey(selectedSource) === sourceKey(source)
-                    ? "border-amber-400 bg-amber-50"
-                    : "bg-secondary/40",
-                ].join(" ")}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-xs font-semibold">{source.file_name}</span>
+              {hiddenCitationCount > 0 && !showAllCitations && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setShowAllCitations(true)}
+                >
+                  View more ({hiddenCitationCount})
+                </Button>
+              )}
 
-                  <Badge variant="secondary">
-                    {source.page_number ? `Page ${source.page_number}` : "PDF"}
-                  </Badge>
-                </div>
-
-                <mark className="mt-2 line-clamp-3 rounded bg-amber-100 px-1 py-0.5 text-xs leading-relaxed text-amber-950">
-                  {source.preview}
-                </mark>
-              </button>
-            ))}
+              {showAllCitations && sources.length > citationPreviewCount && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setShowAllCitations(false)}
+                >
+                  View fewer
+                </Button>
+              )}
+            </div>
           </div>
         )}
       </div>

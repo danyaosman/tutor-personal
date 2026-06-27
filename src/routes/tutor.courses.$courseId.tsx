@@ -444,6 +444,18 @@ function CourseOverview({
             </Select>
           </div>
           <p className="text-sm text-muted-foreground sm:col-span-4">{course.description}</p>
+          <div className="flex flex-wrap gap-2 sm:col-span-4">
+            <Button asChild size="sm" variant="outline">
+              <Link to="/tutor/syllabus" search={{ courseId: course.id }}>
+                <FileText className="h-4 w-4" /> Syllabus
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/tutor/digital-twin" search={{ courseId: course.id }}>
+                <Brain className="h-4 w-4" /> Digital Twin
+              </Link>
+            </Button>
+          </div>
           {updateStatusMutation.error && (
             <Alert variant="destructive" className="sm:col-span-4">
               <AlertDescription>{updateStatusMutation.error.message}</AlertDescription>

@@ -6,6 +6,8 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from accounts.models import TeacherProfile
+from analytics.models import TeachingStyleExample
 from ai_tutor.models import ChatMessage, ChatSession, ResourceChunk
 from courses.models import Classroom, ClassroomEnrollment, Course, CourseResource
 
@@ -128,6 +130,71 @@ class CourseChatAPITests(APITestCase):
         self.assertEqual(call_kwargs["headers"]["X-OpenRouter-Title"], "EduMind Tests")
         self.assertEqual(call_kwargs["json"]["model"], "test-model")
         self.assertIn("Python variables", call_kwargs["json"]["messages"][1]["content"])
+
+    @override_settings(
+        AI_PROVIDER="openrouter",
+        AI_API_KEY="test-ai-key",
+        AI_BASE_URL="https://openrouter.ai/api/v1",
+        AI_MODEL="test-model",
+        AI_REQUEST_TIMEOUT=5,
+        AI_SITE_URL="http://localhost:5173",
+        AI_APP_NAME="EduMind Tests",
+    )
+    @patch("ai_tutor.services.chat_service.requests.post")
+    def test_student_chat_includes_teacher_style_context(self, mock_post):
+        TeacherProfile.objects.create(
+            user=self.teacher,
+            teaching_style_summary="Use Socratic hints before direct answers.",
+            ai_instructions="Always include a quick checkpoint question.",
+        )
+        TeachingStyleExample.objects.create(
+            teacher=self.teacher,
+            course=self.course,
+            example_text="First give a tiny analogy, then connect it back to code.",
+            source_file_url="",
+        )
+        style_resource = CourseResource.objects.create(
+            course=self.course,
+            file_name="teaching-style.pdf",
+            file="course_resources/teaching-style.pdf",
+            file_size=1234,
+            is_style_example=True,
+            processing_status="completed",
+        )
+        ResourceChunk.objects.create(
+            resource=style_resource,
+            chunk_index=0,
+            page_number=1,
+            content="Explain with a friendly analogy before the technical definition.",
+        )
+        mock_response = mock_post.return_value
+        mock_response.ok = True
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {
+            "choices": [{"message": {"content": "Styled answer."}}]
+        }
+        self.client.force_authenticate(user=self.student)
+        ClassroomEnrollment.objects.create(
+            student=self.student,
+            classroom=self.classroom,
+        )
+
+        response = self.client.post(
+            reverse("course-chat", kwargs={"course_pk": self.course.id}),
+            {"message": "What are Python variables?"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        system_prompt = mock_post.call_args.kwargs["json"]["messages"][0]["content"]
+        self.assertIn("Socratic hints", system_prompt)
+        self.assertIn("checkpoint question", system_prompt)
+        self.assertIn("tiny analogy", system_prompt)
+        self.assertIn("teaching-style.pdf", system_prompt)
+        self.assertIn("friendly analogy", system_prompt)
+        user_prompt = mock_post.call_args.kwargs["json"]["messages"][1]["content"]
+        self.assertIn("python-notes.pdf", user_prompt)
+        self.assertNotIn("teaching-style.pdf", user_prompt)
 
     def test_student_must_enroll_before_chatting(self):
         self.client.force_authenticate(user=self.student)

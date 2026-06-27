@@ -196,6 +196,24 @@ export interface UpdateCourseResourceInput {
   is_style_example?: boolean;
 }
 
+export interface CourseSyllabus {
+  id: number;
+  course_id: number;
+  course_title: string;
+  generated_content: string;
+  edited_content: string;
+  content: string;
+  updated_at: string;
+}
+
+export interface TeachingStyleExample {
+  id: number;
+  course_id: number;
+  course_title: string;
+  example_text: string;
+  source_file_url: string;
+}
+
 export interface CourseStudent {
   id: number;
   username: string;
@@ -493,12 +511,76 @@ export function deleteCourseResource(courseId: number, resourceId: number) {
   });
 }
 
-export function uploadCourseResource(courseId: number, file: File) {
+export function uploadCourseResource(
+  courseId: number,
+  file: File,
+  options: { is_style_example?: boolean } = {},
+) {
   const body = new FormData();
   body.append("file", file);
+  if (options.is_style_example !== undefined) {
+    body.append("is_style_example", String(options.is_style_example));
+  }
   return apiRequest<CourseResource>(`/api/courses/${courseId}/resources/`, {
     method: "POST",
     body,
+  });
+}
+
+export function getCourseSyllabus(courseId: number) {
+  return apiRequest<CourseSyllabus>(`/api/courses/${courseId}/syllabus/`);
+}
+
+export function updateCourseSyllabus(courseId: number, editedContent: string) {
+  return apiRequest<CourseSyllabus>(`/api/courses/${courseId}/syllabus/`, {
+    method: "PATCH",
+    body: JSON.stringify({ edited_content: editedContent }),
+  });
+}
+
+export function generateCourseSyllabus(courseId: number, notes = "") {
+  return apiRequest<CourseSyllabus>(`/api/courses/${courseId}/syllabus/generate/`, {
+    method: "POST",
+    body: JSON.stringify({ notes }),
+  });
+}
+
+export function listTeachingStyleExamples(courseId: number) {
+  return apiRequest<TeachingStyleExample[]>(
+    `/api/courses/${courseId}/teaching-style-examples/`,
+  );
+}
+
+export function createTeachingStyleExample(
+  courseId: number,
+  input: { example_text: string; source_file_url?: string },
+) {
+  return apiRequest<TeachingStyleExample>(
+    `/api/courses/${courseId}/teaching-style-examples/`,
+    {
+      method: "POST",
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function updateTeachingStyleExample(
+  courseId: number,
+  exampleId: number,
+  input: { example_text: string },
+) {
+  return apiRequest<TeachingStyleExample>(
+    `/api/courses/${courseId}/teaching-style-examples/${exampleId}/`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export function deleteTeachingStyleExample(courseId: number, exampleId: number) {
+  return apiRequest<void>(`/api/courses/${courseId}/teaching-style-examples/${exampleId}/`, {
+    method: "DELETE",
   });
 }
 

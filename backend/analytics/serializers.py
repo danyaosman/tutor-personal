@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import WeaknessReport
+from .models import TeachingStyleExample, WeaknessReport
 
 
 class WeaknessReportSerializer(serializers.ModelSerializer):
@@ -30,3 +30,28 @@ class WeaknessReportSerializer(serializers.ModelSerializer):
 
 class WeaknessReportGenerateSerializer(serializers.Serializer):
     student_id = serializers.IntegerField(required=False)
+
+
+class TeachingStyleExampleSerializer(serializers.ModelSerializer):
+    course_id = serializers.IntegerField(read_only=True)
+    course_title = serializers.CharField(source="course.title", read_only=True)
+
+    class Meta:
+        model = TeachingStyleExample
+        fields = [
+            "id",
+            "course_id",
+            "course_title",
+            "example_text",
+            "source_file_url",
+        ]
+        read_only_fields = ["id", "course_id", "course_title"]
+        extra_kwargs = {
+            "source_file_url": {"required": False, "allow_blank": True},
+        }
+
+    def validate_example_text(self, value):
+        normalized_value = value.strip()
+        if not normalized_value:
+            raise serializers.ValidationError("Example text cannot be empty.")
+        return normalized_value

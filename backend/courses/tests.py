@@ -9,13 +9,14 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from analytics.models import TeachingStyleExample
 from ai_tutor.models import ChatMessage, ChatSession
 from ai_tutor.models import ResourceChunk
 from ai_tutor.services.pdf_service import PDFPageText
 from flashcards.models import Flashcard, FlashcardSet
 from quizzes.models import Quiz, QuizAnswer, QuizAttempt, QuizQuestion
 
-from .models import Classroom, ClassroomEnrollment, Course, CourseResource
+from .models import Classroom, ClassroomEnrollment, Course, CourseResource, Syllabus
 
 User = get_user_model()
 
@@ -327,6 +328,152 @@ class CourseAPITests(APITestCase):
                 kwargs={"course_pk": self.other_course.id, "pk": resource.id},
             ),
             {"file_name": "Hidden Algebra.pdf"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_learner_resource_list_excludes_teacher_style_resources(self):
+        classroom = Classroom.objects.create(course=self.course, name="Default Class")
+        ClassroomEnrollment.objects.create(student=self.student, classroom=classroom)
+        self.course.status = "active"
+        self.course.save(update_fields=["status"])
+        content_resource = CourseResource.objects.create(
+            course=self.course,
+            file_name="python-content.pdf",
+            file="course_resources/python-content.pdf",
+            file_size=1234,
+            processing_status="completed",
+        )
+        CourseResource.objects.create(
+            course=self.course,
+            file_name="teacher-style.pdf",
+            file="course_resources/teacher-style.pdf",
+            file_size=1234,
+            is_style_example=True,
+            processing_status="completed",
+        )
+        self.client.force_authenticate(user=self.student)
+
+        response = self.client.get(
+            reverse("learner-course-resource-list", kwargs={"course_pk": self.course.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual([item["id"] for item in response.data], [content_resource.id])
+
+    def test_tutor_retrieves_edits_and_generates_owned_course_syllabus(self):
+        CourseResource.objects.create(
+            course=self.course,
+            file_name="python-notes.pdf",
+            file="course_resources/python-notes.pdf",
+            file_size=1234,
+            processing_status="completed",
+        )
+        self.client.force_authenticate(user=self.teacher)
+
+        detail_url = reverse("course-syllabus", kwargs={"course_pk": self.course.id})
+        generate_url = reverse(
+            "course-syllabus-generate",
+            kwargs={"course_pk": self.course.id},
+        )
+
+        empty_response = self.client.get(detail_url)
+        generate_response = self.client.post(
+            generate_url,
+            {"notes": "Spend extra time on functions."},
+            format="json",
+        )
+        edit_response = self.client.patch(
+            detail_url,
+            {"edited_content": "Custom Python syllabus"},
+            format="json",
+        )
+
+        self.assertEqual(empty_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(empty_response.data["content"], "")
+        self.assertEqual(generate_response.status_code, status.HTTP_200_OK)
+        self.assertIn("Intro to Python Syllabus", generate_response.data["content"])
+        self.assertIn("python-notes.pdf", generate_response.data["content"])
+        self.assertEqual(edit_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(edit_response.data["content"], "Custom Python syllabus")
+        self.assertEqual(Syllabus.objects.get(course=self.course).edited_content, "Custom Python syllabus")
+
+    def test_tutor_cannot_manage_another_tutors_syllabus(self):
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.get(
+            reverse("course-syllabus", kwargs={"course_pk": self.other_course.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_student_cannot_manage_course_syllabus(self):
+        self.client.force_authenticate(user=self.student)
+
+        response = self.client.get(
+            reverse("course-syllabus", kwargs={"course_pk": self.course.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_tutor_creates_and_lists_teaching_style_examples_for_owned_course(self):
+        self.client.force_authenticate(user=self.teacher)
+        url = reverse(
+            "course-teaching-style-example-list-create",
+            kwargs={"course_pk": self.course.id},
+        )
+
+        create_response = self.client.post(
+            url,
+            {
+                "example_text": "Use short analogies and then ask a check question.",
+                "source_file_url": "https://example.com/style-note",
+            },
+            format="json",
+        )
+        list_response = self.client.get(url)
+
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(TeachingStyleExample.objects.count(), 1)
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list_response.data[0]["course_id"], self.course.id)
+        self.assertIn("short analogies", list_response.data[0]["example_text"])
+
+    def test_tutor_updates_and_deletes_owned_teaching_style_example(self):
+        example = TeachingStyleExample.objects.create(
+            teacher=self.teacher,
+            course=self.course,
+            example_text="Use old style.",
+            source_file_url="",
+        )
+        self.client.force_authenticate(user=self.teacher)
+        url = reverse(
+            "course-teaching-style-example-detail",
+            kwargs={"course_pk": self.course.id, "pk": example.id},
+        )
+
+        update_response = self.client.patch(
+            url,
+            {"example_text": "Use updated style."},
+            format="json",
+        )
+        delete_response = self.client.delete(url)
+
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(update_response.data["example_text"], "Use updated style.")
+        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(TeachingStyleExample.objects.filter(id=example.id).exists())
+
+    def test_tutor_cannot_create_teaching_style_example_for_another_tutors_course(self):
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.post(
+            reverse(
+                "course-teaching-style-example-list-create",
+                kwargs={"course_pk": self.other_course.id},
+            ),
+            {"example_text": "Hidden style."},
             format="json",
         )
 

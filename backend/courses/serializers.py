@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import ClassroomEnrollment, Course, CourseResource
+from .models import ClassroomEnrollment, Course, CourseResource, Syllabus
 
 
 class CourseStudentSerializer(serializers.Serializer):
@@ -100,3 +100,42 @@ class CourseResourceSerializer(serializers.ModelSerializer):
         if value.size > 10 * 1024 * 1024:
             raise serializers.ValidationError("PDF files must be 10 MB or smaller.")
         return value
+
+
+class SyllabusSerializer(serializers.ModelSerializer):
+    course_id = serializers.IntegerField(read_only=True)
+    course_title = serializers.CharField(source="course.title", read_only=True)
+    content = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Syllabus
+        fields = [
+            "id",
+            "course_id",
+            "course_title",
+            "generated_content",
+            "edited_content",
+            "content",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "course_id",
+            "course_title",
+            "generated_content",
+            "content",
+            "updated_at",
+        ]
+
+    def get_content(self, obj):
+        return obj.edited_content or obj.generated_content
+
+    def validate_edited_content(self, value):
+        normalized_value = value.strip()
+        if not normalized_value:
+            raise serializers.ValidationError("Syllabus content cannot be empty.")
+        return normalized_value
+
+
+class SyllabusGenerateSerializer(serializers.Serializer):
+    notes = serializers.CharField(required=False, allow_blank=True, max_length=1000)

@@ -6,18 +6,22 @@ from rest_framework import generics, parsers, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from analytics.models import TeachingStyleExample
+from analytics.serializers import TeachingStyleExampleSerializer
 from ai_tutor.services.chunk_service import process_course_resource
 from accounts.permissions import IsStudent, IsTeacher
-from ai_tutor.models import ChatMessage, ChatSession
+from ai_tutor.models import ChatMessage, ChatSession, ResourceChunk
 from flashcards.models import Flashcard, FlashcardSet
 from quizzes.models import Quiz, QuizAnswer, QuizAttempt
 
-from .models import Classroom, ClassroomEnrollment, Course, CourseResource
+from .models import Classroom, ClassroomEnrollment, Course, CourseResource, Syllabus
 from .serializers import (
     CourseResourceSerializer,
     CourseSerializer,
     CourseStudentSerializer,
     LearnerCourseSerializer,
+    SyllabusGenerateSerializer,
+    SyllabusSerializer,
 )
 
 User = get_user_model()
@@ -183,7 +187,170 @@ class LearnerCourseResourceListView(generics.ListAPIView):
         return CourseResource.objects.filter(
             course=course,
             processing_status="completed",
+            is_style_example=False,
         ).order_by("-created_at")
+
+
+def build_syllabus_content(course, notes=""):
+    resources = list(
+        CourseResource.objects.filter(course=course)
+        .order_by("-is_style_example", "file_name")
+        .values_list("file_name", "is_style_example")
+    )
+    resource_lines = [
+        f"- {file_name}{' (teaching style reference)' if is_style_example else ''}"
+        for file_name, is_style_example in resources
+    ]
+    sample_chunks = list(
+        ResourceChunk.objects.filter(resource__course=course)
+        .select_related("resource")
+        .order_by("resource__file_name", "chunk_index")[:5]
+    )
+    topic_lines = [
+        f"- {chunk.content[:180].strip()}"
+        for chunk in sample_chunks
+        if chunk.content.strip()
+    ]
+    if not resource_lines:
+        resource_lines = ["- No course PDFs uploaded yet."]
+    if not topic_lines:
+        topic_lines = [
+            f"- Core ideas from {course.subject}",
+            f"- Practice activities for {course.grade_level}",
+            "- Review, quiz practice, and learner questions",
+        ]
+    notes_section = f"\nTutor notes:\n{notes.strip()}\n" if notes.strip() else ""
+
+    return "\n".join(
+        [
+            f"{course.title} Syllabus",
+            "",
+            f"Subject: {course.subject}",
+            f"Grade level: {course.grade_level}",
+            "",
+            "Course description:",
+            course.description,
+            notes_section.strip(),
+            "",
+            "Learning goals:",
+            f"- Build confidence with the main ideas in {course.subject}.",
+            "- Use course resources to answer questions with evidence.",
+            "- Practice through quizzes, flashcards, and AI tutor sessions.",
+            "",
+            "Source resources:",
+            *resource_lines,
+            "",
+            "Suggested weekly outline:",
+            "1. Orientation and baseline review",
+            "2. Guided study of uploaded course resources",
+            "3. Practice questions and misconception checks",
+            "4. Flashcard review and spaced recall",
+            "5. Quiz attempt, feedback, and targeted revision",
+            "",
+            "Topics to emphasize:",
+            *topic_lines,
+            "",
+            "Assessment plan:",
+            "- Use generated quizzes to check understanding.",
+            "- Review weakness reports for missed concepts.",
+            "- Revisit course PDFs and flashcards before the demo assessment.",
+        ]
+    ).replace("\n\n\n", "\n\n")
+
+
+class CourseSyllabusView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsTeacher]
+
+    def get_course(self):
+        return get_object_or_404(
+            Course,
+            pk=self.kwargs["course_pk"],
+            teacher=self.request.user,
+        )
+
+    def get_syllabus(self):
+        syllabus, _ = Syllabus.objects.get_or_create(
+            course=self.get_course(),
+            defaults={"generated_content": ""},
+        )
+        return syllabus
+
+    def get(self, request, course_pk):
+        serializer = SyllabusSerializer(self.get_syllabus())
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def patch(self, request, course_pk):
+        syllabus = self.get_syllabus()
+        serializer = SyllabusSerializer(
+            syllabus,
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, course_pk):
+        return self.patch(request, course_pk)
+
+
+class GenerateCourseSyllabusView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsTeacher]
+
+    def post(self, request, course_pk):
+        course = get_object_or_404(Course, pk=course_pk, teacher=request.user)
+        request_serializer = SyllabusGenerateSerializer(data=request.data)
+        request_serializer.is_valid(raise_exception=True)
+        generated_content = build_syllabus_content(
+            course,
+            request_serializer.validated_data.get("notes", ""),
+        )
+        syllabus, _ = Syllabus.objects.update_or_create(
+            course=course,
+            defaults={
+                "generated_content": generated_content,
+                "edited_content": generated_content,
+            },
+        )
+        serializer = SyllabusSerializer(syllabus)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class TeachingStyleExampleListCreateView(generics.ListCreateAPIView):
+    serializer_class = TeachingStyleExampleSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTeacher]
+
+    def get_course(self):
+        return get_object_or_404(
+            Course,
+            pk=self.kwargs["course_pk"],
+            teacher=self.request.user,
+        )
+
+    def get_queryset(self):
+        return TeachingStyleExample.objects.filter(
+            teacher=self.request.user,
+            course=self.get_course(),
+        ).order_by("-id")
+
+    def perform_create(self, serializer):
+        serializer.save(
+            teacher=self.request.user,
+            course=self.get_course(),
+            source_file_url=serializer.validated_data.get("source_file_url", ""),
+        )
+
+
+class TeachingStyleExampleDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = TeachingStyleExampleSerializer
+    permission_classes = [permissions.IsAuthenticated, IsTeacher]
+
+    def get_queryset(self):
+        return TeachingStyleExample.objects.filter(
+            teacher=self.request.user,
+            course_id=self.kwargs["course_pk"],
+            course__teacher=self.request.user,
+        )
 
 
 class CourseStudentListView(APIView):

@@ -5,10 +5,14 @@ from .views import (
     CourseDetailView,
     CourseEnrollmentView,
     CourseResourceDetailView,
+    CourseSyllabusView,
     CourseStudentListView,
     CourseStudentProgressView,
     EnrolledCourseListView,
+    GenerateCourseSyllabusView,
     LearnerCourseResourceListView,
+    TeachingStyleExampleDetailView,
+    TeachingStyleExampleListCreateView,
     CourseListCreateView,
     CourseResourceListCreateView,
 )
@@ -27,6 +31,26 @@ urlpatterns = [
         "<int:course_pk>/students/<int:student_pk>/progress/",
         CourseStudentProgressView.as_view(),
         name="course-student-progress",
+    ),
+    path(
+        "<int:course_pk>/syllabus/",
+        CourseSyllabusView.as_view(),
+        name="course-syllabus",
+    ),
+    path(
+        "<int:course_pk>/syllabus/generate/",
+        GenerateCourseSyllabusView.as_view(),
+        name="course-syllabus-generate",
+    ),
+    path(
+        "<int:course_pk>/teaching-style-examples/",
+        TeachingStyleExampleListCreateView.as_view(),
+        name="course-teaching-style-example-list-create",
+    ),
+    path(
+        "<int:course_pk>/teaching-style-examples/<int:pk>/",
+        TeachingStyleExampleDetailView.as_view(),
+        name="course-teaching-style-example-detail",
     ),
     path(
         "<int:course_pk>/learner-resources/",
