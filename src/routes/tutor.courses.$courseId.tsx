@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
   BarChart3,
@@ -51,6 +51,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  deleteCourse,
   deleteCourseResource,
   generateCourseWeaknessReports,
   getCourse,
@@ -256,11 +257,10 @@ function CourseDetailPage() {
   const { courseId: courseIdParam } = Route.useParams();
   const search = Route.useSearch();
   const courseId = Number(courseIdParam);
-  const [activeSection, setActiveSection] = useState<CourseSectionId>(
-    search.section ?? "overview",
-  );
+  const [activeSection, setActiveSection] = useState<CourseSectionId>(search.section ?? "overview");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const courseQuery = useQuery({
     queryKey: ["courses", courseId],
     queryFn: () => getCourse(courseId),
@@ -303,6 +303,13 @@ function CourseDetailPage() {
     onSuccess: async (updatedCourse) => {
       queryClient.setQueryData(["courses", courseId], updatedCourse);
       await queryClient.invalidateQueries({ queryKey: ["courses"] });
+    },
+  });
+  const deleteCourseMutation = useMutation<void, Error, void>({
+    mutationFn: () => deleteCourse(courseId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["courses"] });
+      await navigate({ to: "/tutor/courses" });
     },
   });
 
@@ -363,6 +370,7 @@ function CourseDetailPage() {
               course={courseQuery.data}
               resourceCount={resourcesQuery.data?.length ?? courseQuery.data?.resource_count ?? 0}
               updateStatusMutation={updateStatusMutation}
+              deleteCourseMutation={deleteCourseMutation}
             />
           )}
 
@@ -391,12 +399,16 @@ function CourseOverview({
   course,
   resourceCount,
   updateStatusMutation,
+  deleteCourseMutation,
 }: {
   isLoading: boolean;
   course?: Awaited<ReturnType<typeof getCourse>>;
   resourceCount: number;
   updateStatusMutation: ReturnType<typeof useMutation<Course, Error, CourseStatus>>;
+  deleteCourseMutation: ReturnType<typeof useMutation<void, Error, void>>;
 }) {
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
   if (isLoading) {
     return (
       <Card className="border-dashed p-8 text-center text-sm text-muted-foreground">
@@ -455,6 +467,57 @@ function CourseOverview({
                 <Brain className="h-4 w-4" /> Digital Twin
               </Link>
             </Button>
+            <AlertDialog
+              open={deleteOpen}
+              onOpenChange={(nextOpen) => {
+                setDeleteOpen(nextOpen);
+                if (nextOpen) deleteCourseMutation.reset();
+              }}
+            >
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" /> Delete Course
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete this course?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This permanently removes &quot;{course.title}&quot;, its enrollments, resources,
+                    quizzes, flashcards, and learner activity linked to the course.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                {deleteCourseMutation.error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{deleteCourseMutation.error.message}</AlertDescription>
+                  </Alert>
+                )}
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={deleteCourseMutation.isPending}>
+                    Cancel
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    disabled={deleteCourseMutation.isPending}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={async (event) => {
+                      event.preventDefault();
+                      try {
+                        await deleteCourseMutation.mutateAsync();
+                      } catch {
+                        // React Query exposes the delete error above.
+                      }
+                    }}
+                  >
+                    {deleteCourseMutation.isPending ? "Deleting..." : "Delete Course"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
           {updateStatusMutation.error && (
             <Alert variant="destructive" className="sm:col-span-4">
@@ -689,13 +752,13 @@ function StudentProgressGrid({
         )}
         <div className="rounded-lg border bg-card px-3 py-3 sm:col-span-2">
           <div className="text-xs text-muted-foreground">Latest Quiz Attempt</div>
-          <div className="mt-1 text-sm font-semibold">
-            {formatDateTime(quiz.latest_attempt_at)}
-          </div>
+          <div className="mt-1 text-sm font-semibold">{formatDateTime(quiz.latest_attempt_at)}</div>
         </div>
         <div className="rounded-lg border bg-card px-3 py-3 sm:col-span-2">
           <div className="text-xs text-muted-foreground">Latest Chat</div>
-          <div className="mt-1 text-sm font-semibold">{formatDateTime(activity.latest_chat_at)}</div>
+          <div className="mt-1 text-sm font-semibold">
+            {formatDateTime(activity.latest_chat_at)}
+          </div>
         </div>
       </div>
 
@@ -1004,9 +1067,7 @@ function WeaknessReportPanel({
                 </div>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-red-950">
-                    <div className="text-xs font-semibold text-red-700">
-                      Selected Choice
-                    </div>
+                    <div className="text-xs font-semibold text-red-700">Selected Choice</div>
                     <div className="mt-1 text-sm font-medium">
                       {selectedChoices.length > 0
                         ? selectedChoices
@@ -1018,9 +1079,7 @@ function WeaknessReportPanel({
                     </div>
                   </div>
                   <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-950">
-                    <div className="text-xs font-semibold text-emerald-700">
-                      Correct Choice
-                    </div>
+                    <div className="text-xs font-semibold text-emerald-700">Correct Choice</div>
                     <div className="mt-1 text-sm font-medium">
                       {topic.correct_option}
                       {topic.correct_choice ? ` - ${topic.correct_choice}` : ""}
@@ -1214,14 +1273,8 @@ function ResourceRow({
             <ExternalLink className="h-4 w-4" /> Open
           </a>
         </Button>
-        <EditResourceDialog
-          resource={resource}
-          updateResourceMutation={updateResourceMutation}
-        />
-        <DeleteResourceDialog
-          resource={resource}
-          deleteResourceMutation={deleteResourceMutation}
-        />
+        <EditResourceDialog resource={resource} updateResourceMutation={updateResourceMutation} />
+        <DeleteResourceDialog resource={resource} deleteResourceMutation={deleteResourceMutation} />
       </div>
     </div>
   );

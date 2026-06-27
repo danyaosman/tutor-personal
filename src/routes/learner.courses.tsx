@@ -3,6 +3,17 @@ import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-r
 import { useMemo, useState } from "react";
 import { LearnerLayout } from "@/components/learner/LearnerLayout";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,9 +31,10 @@ import {
   enrollInCourse,
   listAvailableCourses,
   listEnrolledCourses,
+  unenrollFromCourse,
   type LearnerCourse,
 } from "@/lib/api";
-import { BookOpen, MessageCircle, Search, Users } from "lucide-react";
+import { BookOpen, MessageCircle, Search, Trash2, Users } from "lucide-react";
 
 export const Route = createFileRoute("/learner/courses")({
   head: () => ({ meta: [{ title: "My Courses - AI Tutor" }] }),
@@ -63,18 +75,22 @@ function LearnerCoursesList() {
       setSearchQuery("");
     },
   });
+  const unenrollMutation = useMutation<void, Error, number>({
+    mutationFn: unenrollFromCourse,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["enrolled-courses"] }),
+        queryClient.invalidateQueries({ queryKey: ["available-courses"] }),
+        queryClient.invalidateQueries({ queryKey: ["learner-analytics-overview"] }),
+      ]);
+    },
+  });
   const filteredAvailableCourses = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
     if (!normalizedQuery) return availableCoursesQuery.data ?? [];
 
     return (availableCoursesQuery.data ?? []).filter((course) =>
-      [
-        course.title,
-        course.teacher_name,
-        course.subject,
-        course.grade_level,
-        course.description,
-      ]
+      [course.title, course.teacher_name, course.subject, course.grade_level, course.description]
         .join(" ")
         .toLowerCase()
         .includes(normalizedQuery),
@@ -124,9 +140,7 @@ function LearnerCoursesList() {
               </p>
             )}
             {availableCoursesQuery.data && filteredAvailableCourses.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                No courses match your search.
-              </p>
+              <p className="text-sm text-muted-foreground">No courses match your search.</p>
             )}
             <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
               {filteredAvailableCourses.map((course) => (
@@ -159,6 +173,12 @@ function LearnerCoursesList() {
         </Alert>
       )}
 
+      {unenrollMutation.error && (
+        <Alert variant="destructive">
+          <AlertDescription>{unenrollMutation.error.message}</AlertDescription>
+        </Alert>
+      )}
+
       {enrolledCoursesQuery.data?.length === 0 && (
         <Card className="border-dashed p-10 text-center shadow-soft">
           <BookOpen className="mx-auto h-9 w-9 text-muted-foreground" />
@@ -171,7 +191,12 @@ function LearnerCoursesList() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {enrolledCoursesQuery.data?.map((course) => (
-          <EnrolledCourseCard key={course.id} course={course} />
+          <EnrolledCourseCard
+            key={course.id}
+            course={course}
+            isUnenrolling={unenrollMutation.isPending}
+            onUnenroll={() => unenrollMutation.mutateAsync(course.id)}
+          />
         ))}
       </div>
     </LearnerLayout>
@@ -200,9 +225,7 @@ function CatalogCourseRow({
           <div className="mt-1 text-xs text-muted-foreground">
             {course.subject} - {course.grade_level} with {course.teacher_name}
           </div>
-          <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
-            {course.description}
-          </p>
+          <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{course.description}</p>
         </div>
         <Button
           size="sm"
@@ -218,7 +241,17 @@ function CatalogCourseRow({
   );
 }
 
-function EnrolledCourseCard({ course }: { course: LearnerCourse }) {
+function EnrolledCourseCard({
+  course,
+  isUnenrolling,
+  onUnenroll,
+}: {
+  course: LearnerCourse;
+  isUnenrolling: boolean;
+  onUnenroll: () => Promise<void>;
+}) {
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
   return (
     <Card className="overflow-hidden border-border/60 shadow-soft transition hover:shadow-glow/40">
       <div className="h-2 bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500" />
@@ -233,18 +266,53 @@ function EnrolledCourseCard({ course }: { course: LearnerCourse }) {
         <p className="mt-3 line-clamp-3 text-sm text-muted-foreground">{course.description}</p>
         <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1">
-            <BookOpen className="h-3.5 w-3.5" /> {course.resource_count} resources
-          </span>
-          <span className="inline-flex items-center gap-1">
             <Users className="h-3.5 w-3.5" /> {course.student_count} students
           </span>
         </div>
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap gap-2">
           <Button className="flex-1 gradient-ai text-white shadow-glow" asChild>
             <Link to="/learner/courses/$courseId" params={{ courseId: String(course.id) }}>
               <MessageCircle className="h-4 w-4" /> Open Notebook
             </Link>
           </Button>
+          <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+            <AlertDialogTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" /> Unenroll
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Unenroll from this course?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This removes &quot;{course.title}&quot; from your enrolled courses. You can enroll
+                  again later if the course is still active.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isUnenrolling}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={isUnenrolling}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={async (event) => {
+                    event.preventDefault();
+                    try {
+                      await onUnenroll();
+                      setDeleteOpen(false);
+                    } catch {
+                      // React Query exposes the unenroll error above.
+                    }
+                  }}
+                >
+                  {isUnenrolling ? "Unenrolling..." : "Unenroll"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </CardContent>
     </Card>

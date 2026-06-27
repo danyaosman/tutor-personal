@@ -7,8 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { currentUserQueryKey } from "@/hooks/use-current-user";
 import { getProfile, updateProfile, type UpdateProfileInput, type UserProfile } from "@/lib/api";
+import { gradeLevels } from "@/lib/grades";
 
 export const Route = createFileRoute("/learner/settings")({
   head: () => ({ meta: [{ title: "Learner Settings - AI Tutor" }] }),
@@ -76,11 +84,21 @@ function LearnerSettingsPage() {
                 <Field label="Last Name" name="last_name" defaultValue={profile.last_name} />
                 <Field label="Email" name="email" type="email" defaultValue={profile.email} />
                 <Field label="Phone" name="phone" defaultValue={profile.phone} />
-                <Field
-                  label="Grade Level"
-                  name="grade_level"
-                  defaultValue={profile.grade_level ?? ""}
-                />
+                <div className="space-y-1.5">
+                  <Label>Grade Level</Label>
+                  <Select name="grade_level" defaultValue={profile.grade_level ?? "10"}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {gradeLevels.map((grade) => (
+                        <SelectItem key={grade.value} value={grade.value}>
+                          {grade.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               {profile.weakness_summary && (

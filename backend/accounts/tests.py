@@ -44,6 +44,24 @@ class AuthenticationAPITests(APITestCase):
             ).exists()
         )
 
+    def test_student_registration_rejects_invalid_grade(self):
+        response = self.client.post(
+            reverse("register"),
+            {
+                "username": "new-student",
+                "email": "student@example.com",
+                "password": self.password,
+                "first_name": "New",
+                "last_name": "Student",
+                "role": User.STUDENT,
+                "grade_level": "13",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("grade_level", response.data)
+
     def test_teacher_registration_creates_profile(self):
         response = self.client.post(
             reverse("register"),
@@ -154,6 +172,15 @@ class AuthenticationAPITests(APITestCase):
         self.user.student_profile.refresh_from_db()
         self.assertEqual(self.user.student_profile.grade_level, "12")
         self.assertFalse(hasattr(self.user, "teacher_profile"))
+
+        invalid_update_response = self.client.patch(
+            reverse("profile"),
+            {"grade_level": "13"},
+            format="json",
+        )
+
+        self.assertEqual(invalid_update_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("grade_level", invalid_update_response.data)
 
     def test_teacher_profile_returns_and_updates_teacher_fields(self):
         teacher = User.objects.create_user(

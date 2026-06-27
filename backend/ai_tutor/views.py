@@ -15,6 +15,13 @@ from ai_tutor.services.chat_service import answer_course_question
 from courses.models import ClassroomEnrollment, Course
 
 
+def build_chat_title(question):
+    normalized_title = " ".join(question.split())
+    if len(normalized_title) > 80:
+        return f"{normalized_title[:77].rstrip()}..."
+    return normalized_title
+
+
 class CourseChatView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsStudent]
 
@@ -47,6 +54,7 @@ class CourseChatView(APIView):
             session = ChatSession.objects.create(
                 student=request.user,
                 course=course,
+                title=build_chat_title(question),
             )
 
         answer, sources = answer_course_question(course, question)

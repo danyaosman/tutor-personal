@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createCourse, listCourses, type CourseStatus } from "@/lib/api";
+import { gradeLevels } from "@/lib/grades";
 
 export const Route = createFileRoute("/tutor/courses")({
   head: () => ({ meta: [{ title: "Courses - AI Tutor" }] }),
@@ -138,8 +139,19 @@ function CourseListPage() {
                   <Input id="subject" name="subject" placeholder="Computer Science" required />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="grade_level">Grade</Label>
-                  <Input id="grade_level" name="grade_level" placeholder="e.g. Grade 10" required />
+                  <Label>Grade</Label>
+                  <Select name="grade_level" defaultValue="10" required>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {gradeLevels.map((grade) => (
+                        <SelectItem key={grade.value} value={grade.value}>
+                          {grade.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="space-y-1.5">

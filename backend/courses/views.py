@@ -128,6 +128,16 @@ class CourseEnrollmentView(APIView):
         )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    def delete(self, request, course_pk):
+        course = get_object_or_404(Course, pk=course_pk)
+        deleted_count, _ = ClassroomEnrollment.objects.filter(
+            student=request.user,
+            classroom__course=course,
+        ).delete()
+        if deleted_count == 0:
+            raise Http404("Student is not enrolled in this course.")
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class CourseResourceListCreateView(generics.ListCreateAPIView):
     serializer_class = CourseResourceSerializer
@@ -177,12 +187,10 @@ class LearnerCourseResourceListView(generics.ListAPIView):
     serializer_class = CourseResourceSerializer
     permission_classes = [permissions.IsAuthenticated, IsStudent]
 
-    def get_queryset(self):
-        course = get_object_or_404(
-            Course,
-            pk=self.kwargs["course_pk"],
-            status="active",
-            classrooms__enrollments__student=self.request.user,
+    def list(self, request, *args, **kwargs):
+        return Response(
+            {"detail": "Course source PDFs are only visible to tutors."},
+            status=status.HTTP_403_FORBIDDEN,
         )
         return CourseResource.objects.filter(
             course=course,

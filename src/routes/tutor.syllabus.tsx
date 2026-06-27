@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { BookOpen, LoaderCircle, Save, Sparkles } from "lucide-react";
+import { BookOpen, FileText, LoaderCircle, Save, Sparkles, UploadCloud, X } from "lucide-react";
 import { TutorLayout } from "@/components/tutor/TutorLayout";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -19,8 +20,10 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   generateCourseSyllabus,
   getCourseSyllabus,
+  listCourseResources,
   listCourses,
   updateCourseSyllabus,
+  uploadCourseResource,
   type Course,
 } from "@/lib/api";
 
@@ -55,11 +58,10 @@ function formatDateTime(value?: string | null) {
 
 function TutorSyllabusPage() {
   const search = Route.useSearch();
-  const [selectedCourseId, setSelectedCourseId] = useState<number | null>(
-    search.courseId ?? null,
-  );
+  const [selectedCourseId, setSelectedCourseId] = useState<number | null>(search.courseId ?? null);
   const [draftContent, setDraftContent] = useState("");
   const [notes, setNotes] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const queryClient = useQueryClient();
   const coursesQuery = useQuery({
     queryKey: ["courses"],
@@ -70,6 +72,21 @@ function TutorSyllabusPage() {
     queryKey: ["courses", selectedCourseId, "syllabus"],
     queryFn: () => getCourseSyllabus(selectedCourseId ?? 0),
     enabled: selectedCourseId !== null,
+  });
+  const resourcesQuery = useQuery({
+    queryKey: ["courses", selectedCourseId, "resources"],
+    queryFn: () => listCourseResources(selectedCourseId ?? 0),
+    enabled: selectedCourseId !== null,
+  });
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => uploadCourseResource(selectedCourseId ?? 0, file),
+    onSuccess: async () => {
+      setSelectedFile(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["courses"] }),
+        queryClient.invalidateQueries({ queryKey: ["courses", selectedCourseId, "resources"] }),
+      ]);
+    },
   });
   const saveMutation = useMutation({
     mutationFn: () => updateCourseSyllabus(selectedCourseId ?? 0, draftContent),
@@ -138,8 +155,10 @@ function TutorSyllabusPage() {
                   value={selectedCourseId ? String(selectedCourseId) : ""}
                   onValueChange={(value) => {
                     setSelectedCourseId(Number(value));
+                    setSelectedFile(null);
                     saveMutation.reset();
                     generateMutation.reset();
+                    uploadMutation.reset();
                   }}
                 >
                   <SelectTrigger>
@@ -164,7 +183,7 @@ function TutorSyllabusPage() {
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">Grade</div>
-                  <div className="text-sm font-semibold">{selectedCourse.grade_level}</div>
+                  <div className="text-sm font-semibold">Grade {selectedCourse.grade_level}</div>
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-muted-foreground">Status</span>
@@ -223,10 +242,16 @@ function TutorSyllabusPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {(syllabusQuery.error || saveMutation.error || generateMutation.error) && (
+            {(syllabusQuery.error ||
+              resourcesQuery.error ||
+              uploadMutation.error ||
+              saveMutation.error ||
+              generateMutation.error) && (
               <Alert variant="destructive">
                 <AlertDescription>
                   {syllabusQuery.error?.message ??
+                    resourcesQuery.error?.message ??
+                    uploadMutation.error?.message ??
                     saveMutation.error?.message ??
                     generateMutation.error?.message}
                 </AlertDescription>
@@ -245,23 +270,95 @@ function TutorSyllabusPage() {
             {selectedCourseId && !syllabusQuery.isPending && (
               <>
                 <div className="space-y-1.5">
-                  <Label htmlFor="syllabus-notes">Generation notes</Label>
+                  <Label htmlFor="syllabus-source-text">Source text or instructions</Label>
                   <Textarea
-                    id="syllabus-notes"
-                    rows={3}
+                    id="syllabus-source-text"
+                    rows={6}
                     value={notes}
                     onChange={(event) => setNotes(event.target.value)}
-                    placeholder="Optional focus areas for the generated syllabus"
+                    placeholder="Paste curriculum notes, weekly goals, unit outlines, or instructions for the generated syllabus."
                   />
                 </div>
+                <div className="rounded-lg border p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <Label>PDF sources</Label>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Upload course PDFs here, then generate a syllabus from the extracted text.
+                      </p>
+                    </div>
+                    <Badge variant="secondary">
+                      {resourcesQuery.data?.length ?? 0} tutor source
+                      {(resourcesQuery.data?.length ?? 0) === 1 ? "" : "s"}
+                    </Badge>
+                  </div>
+                  <form
+                    className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center"
+                    onSubmit={async (event) => {
+                      event.preventDefault();
+                      if (!selectedFile) return;
+                      try {
+                        await uploadMutation.mutateAsync(selectedFile);
+                        event.currentTarget.reset();
+                      } catch {
+                        // React Query exposes the upload error above.
+                      }
+                    }}
+                  >
+                    <Input
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      disabled={uploadMutation.isPending}
+                      onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+                    />
+                    {selectedFile && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={uploadMutation.isPending}
+                        onClick={() => setSelectedFile(null)}
+                      >
+                        <X className="h-4 w-4" /> Clear
+                      </Button>
+                    )}
+                    <Button
+                      type="submit"
+                      className="gradient-ai text-white"
+                      disabled={!selectedFile || uploadMutation.isPending}
+                    >
+                      {uploadMutation.isPending ? (
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <UploadCloud className="h-4 w-4" />
+                      )}
+                      {uploadMutation.isPending ? "Uploading..." : "Upload PDF"}
+                    </Button>
+                  </form>
+                  {resourcesQuery.data && resourcesQuery.data.length > 0 && (
+                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                      {resourcesQuery.data.slice(0, 6).map((resource) => (
+                        <div
+                          key={resource.id}
+                          className="flex min-w-0 items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-xs"
+                        >
+                          <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          <span className="truncate">{resource.file_name}</span>
+                          <Badge variant="secondary" className="ml-auto capitalize">
+                            {resource.processing_status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="syllabus-content">Content</Label>
+                  <Label htmlFor="syllabus-content">Generated syllabus draft</Label>
                   <Textarea
                     id="syllabus-content"
                     className="min-h-[520px] font-mono text-sm leading-6"
                     value={draftContent}
                     onChange={(event) => setDraftContent(event.target.value)}
-                    placeholder="Generate or write a syllabus for this course"
+                    placeholder="Generate from pasted text and uploaded PDFs, then make final edits here."
                   />
                 </div>
               </>

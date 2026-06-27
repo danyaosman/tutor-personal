@@ -150,6 +150,7 @@ export interface RegisterInput {
   first_name: string;
   last_name: string;
   role: UserRole;
+  grade_level?: string;
 }
 
 export type CourseStatus = "draft" | "active" | "archived";
@@ -397,7 +398,6 @@ export interface LearnerAnalyticsOverview {
 
 export interface CourseChatSource {
   resource_id: number;
-  file_name: string;
   page_number: number | null;
   chunk_index: number;
   preview: string;
@@ -471,6 +471,12 @@ export function updateCourse(courseId: number, input: UpdateCourseInput) {
   });
 }
 
+export function deleteCourse(courseId: number) {
+  return apiRequest<void>(`/api/courses/${courseId}/`, {
+    method: "DELETE",
+  });
+}
+
 export function listAvailableCourses() {
   return apiRequest<LearnerCourse[]>("/api/courses/available/");
 }
@@ -483,6 +489,12 @@ export function enrollInCourse(courseId: number) {
   return apiRequest<LearnerCourse>(`/api/courses/${courseId}/enroll/`, {
     method: "POST",
     body: JSON.stringify({}),
+  });
+}
+
+export function unenrollFromCourse(courseId: number) {
+  return apiRequest<void>(`/api/courses/${courseId}/enroll/`, {
+    method: "DELETE",
   });
 }
 
@@ -546,22 +558,17 @@ export function generateCourseSyllabus(courseId: number, notes = "") {
 }
 
 export function listTeachingStyleExamples(courseId: number) {
-  return apiRequest<TeachingStyleExample[]>(
-    `/api/courses/${courseId}/teaching-style-examples/`,
-  );
+  return apiRequest<TeachingStyleExample[]>(`/api/courses/${courseId}/teaching-style-examples/`);
 }
 
 export function createTeachingStyleExample(
   courseId: number,
   input: { example_text: string; source_file_url?: string },
 ) {
-  return apiRequest<TeachingStyleExample>(
-    `/api/courses/${courseId}/teaching-style-examples/`,
-    {
-      method: "POST",
-      body: JSON.stringify(input),
-    },
-  );
+  return apiRequest<TeachingStyleExample>(`/api/courses/${courseId}/teaching-style-examples/`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }
 
 export function updateTeachingStyleExample(
@@ -628,6 +635,7 @@ export interface ChatMessageHistory {
 export interface ChatSessionSummary {
   id: number;
   course_id: number;
+  title: string;
   created_at: string;
   last_message: {
     sender: "student" | "ai";
@@ -639,6 +647,7 @@ export interface ChatSessionSummary {
 export interface ChatSessionDetail {
   id: number;
   course_id: number;
+  title: string;
   created_at: string;
   messages: ChatMessageHistory[];
 }

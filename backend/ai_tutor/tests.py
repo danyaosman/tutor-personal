@@ -76,9 +76,74 @@ class CourseChatAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("Python variables", response.data["answer"])
-        self.assertEqual(response.data["sources"][0]["file_name"], "python-notes.pdf")
+        self.assertNotIn("file_name", response.data["sources"][0])
+        self.assertEqual(response.data["sources"][0]["page_number"], 1)
+        self.assertIn("Python variables", response.data["sources"][0]["preview"])
         self.assertEqual(ChatSession.objects.count(), 1)
+        self.assertEqual(ChatSession.objects.first().title, "What are Python variables?")
         self.assertEqual(ChatMessage.objects.count(), 2)
+
+    def test_chat_history_uses_first_question_as_session_title(self):
+        self.client.force_authenticate(user=self.student)
+        ClassroomEnrollment.objects.create(
+            student=self.student,
+            classroom=self.classroom,
+        )
+
+        chat_response = self.client.post(
+            reverse("course-chat", kwargs={"course_pk": self.course.id}),
+            {"message": "How do Python functions reuse instructions?"},
+            format="json",
+        )
+        session_id = chat_response.data["session_id"]
+
+        second_response = self.client.post(
+            reverse("course-chat", kwargs={"course_pk": self.course.id}),
+            {
+                "message": "Can you give me another example?",
+                "session_id": session_id,
+            },
+            format="json",
+        )
+        list_response = self.client.get(
+            reverse("student-course-chat-sessions", kwargs={"course_pk": self.course.id})
+        )
+        detail_response = self.client.get(
+            reverse("student-chat-session-detail", kwargs={"session_pk": session_id})
+        )
+
+        self.assertEqual(second_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            list_response.data[0]["title"],
+            "How do Python functions reuse instructions?",
+        )
+        self.assertEqual(detail_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            detail_response.data["title"],
+            "How do Python functions reuse instructions?",
+        )
+
+    def test_chat_session_title_is_truncated_from_long_first_question(self):
+        self.client.force_authenticate(user=self.student)
+        ClassroomEnrollment.objects.create(
+            student=self.student,
+            classroom=self.classroom,
+        )
+        long_question = (
+            "Can you explain Python variables, assignments, functions, return values, "
+            "and how they all work together in one beginner friendly example?"
+        )
+
+        self.client.post(
+            reverse("course-chat", kwargs={"course_pk": self.course.id}),
+            {"message": long_question},
+            format="json",
+        )
+
+        session = ChatSession.objects.first()
+        self.assertLessEqual(len(session.title), 80)
+        self.assertTrue(session.title.endswith("..."))
 
     @override_settings(
         AI_PROVIDER="openrouter",

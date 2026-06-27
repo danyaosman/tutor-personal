@@ -34,6 +34,11 @@ class ChatSession(models.Model):
         on_delete=models.CASCADE
     )
 
+    title = models.CharField(
+        max_length=80,
+        blank=True
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True
     )

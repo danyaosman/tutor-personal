@@ -16,11 +16,8 @@ import {
   getChatSession,
   listCourseChatSessions,
   listEnrolledCourses,
-  listLearnerCourseResources,
-  resolveFileUrl,
   type CourseChatResponse,
   type CourseChatSource,
-  type CourseResource,
 } from "@/lib/api";
 import {
   ArrowDown,
@@ -28,9 +25,7 @@ import {
   Bot,
   Brain,
   CheckCircle2,
-  ExternalLink,
   HelpCircle,
-  FileText,
   Loader2,
   MessageSquare,
   Plus,
@@ -94,12 +89,6 @@ function LearnerCourseNotebook() {
     queryFn: listEnrolledCourses,
   });
 
-  const resourcesQuery = useQuery({
-    queryKey: ["learner-course-resources", courseId],
-    queryFn: () => listLearnerCourseResources(courseId),
-    enabled: Boolean(courseId),
-  });
-
   const chatSessionsQuery = useQuery({
     queryKey: ["course-chat-sessions", courseId],
     queryFn: () => listCourseChatSessions(courseId),
@@ -141,7 +130,8 @@ function LearnerCourseNotebook() {
   });
 
   const generateQuizMutation = useMutation({
-    mutationFn: () => generateCourseQuiz(courseId, { question_count: 5, difficulty_level: "medium" }),
+    mutationFn: () =>
+      generateCourseQuiz(courseId, { question_count: 5, difficulty_level: "medium" }),
     onSuccess: async (quiz) => {
       setStudyToolMessage(`Created "${quiz.title}" with ${quiz.questions.length} questions.`);
       await queryClient.invalidateQueries({ queryKey: ["learner-quizzes"] });
@@ -187,7 +177,8 @@ function LearnerCourseNotebook() {
   function scrollChatToBottom(force = false) {
     if (!force && !shouldStickToBottomRef.current) {
       const chatElement = chatScrollRef.current;
-      if (chatElement) setShowJumpToEnd(getChatBottomDistance(chatElement) > CHAT_JUMP_BUTTON_THRESHOLD);
+      if (chatElement)
+        setShowJumpToEnd(getChatBottomDistance(chatElement) > CHAT_JUMP_BUTTON_THRESHOLD);
       return;
     }
 
@@ -490,7 +481,7 @@ function LearnerCourseNotebook() {
                         ].join(" ")}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium">Chat #{session.id}</span>
+                          <span className="line-clamp-1 font-medium">{session.title}</span>
 
                           {loadingSessionId === session.id && (
                             <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
@@ -516,93 +507,7 @@ function LearnerCourseNotebook() {
                 </CardContent>
               </Card>
 
-              <Card className="h-fit shadow-soft">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" /> Course Resources
-                  </CardTitle>
-                </CardHeader>
-
-                <CardContent>
-                  {resourcesQuery.isPending && (
-                    <p className="text-sm text-muted-foreground">Loading resources...</p>
-                  )}
-
-                  {resourcesQuery.error && (
-                    <Alert variant="destructive">
-                      <AlertDescription>{resourcesQuery.error.message}</AlertDescription>
-                    </Alert>
-                  )}
-
-                  {resourcesQuery.data?.length === 0 && (
-                    <div className="rounded-lg border border-dashed p-5 text-center">
-                      <p className="text-sm font-medium">No completed resources yet</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Ask the tutor to upload a readable PDF.
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="space-y-3">
-                    {resourcesQuery.data?.map((resource) => {
-                      const isHighlighted = selectedSource?.resource_id === resource.id;
-
-                      return (
-                        <div
-                          key={resource.id}
-                          className={[
-                            "rounded-lg border p-3 transition",
-                            isHighlighted
-                              ? "border-amber-400 bg-amber-50 shadow-sm"
-                              : "bg-background",
-                          ].join(" ")}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div
-                              className={[
-                                "grid h-9 w-9 shrink-0 place-items-center rounded-lg",
-                                isHighlighted
-                                  ? "bg-amber-200 text-amber-700"
-                                  : "bg-red-500/10 text-red-600",
-                              ].join(" ")}
-                            >
-                              <FileText className="h-4 w-4" />
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate text-sm font-semibold">
-                                {resource.file_name}
-                              </div>
-                              <Badge variant="secondary" className="mt-1 capitalize">
-                                {resource.processing_status}
-                              </Badge>
-                            </div>
-                          </div>
-
-                          <Button asChild size="sm" variant="outline" className="mt-3 w-full">
-                            <a
-                              href={resolveFileUrl(resource.file)}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              <ExternalLink className="h-4 w-4" /> Open PDF
-                            </a>
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {selectedSource && (
-                    <CitationEvidencePanel
-                      source={selectedSource}
-                      resource={resourcesQuery.data?.find(
-                        (resource) => resource.id === selectedSource.resource_id,
-                      )}
-                    />
-                  )}
-                </CardContent>
-              </Card>
+              {selectedSource && <CitationEvidencePanel source={selectedSource} />}
             </div>
 
             <Card className="h-[min(760px,calc(100vh-7rem))] min-h-[640px] shadow-soft">
@@ -746,7 +651,7 @@ function LearnerCourseNotebook() {
                     ].join(" ")}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">Chat #{session.id}</span>
+                      <span className="line-clamp-1 font-medium">{session.title}</span>
 
                       {loadingSessionId === session.id && (
                         <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
@@ -773,20 +678,7 @@ function LearnerCourseNotebook() {
   );
 }
 
-function CitationEvidencePanel({
-  source,
-  resource,
-}: {
-  source: CourseChatSource;
-  resource?: CourseResource;
-}) {
-  const pageUrl =
-    resource && source.page_number
-      ? `${resolveFileUrl(resource.file)}#page=${source.page_number}`
-      : resource
-        ? resolveFileUrl(resource.file)
-        : "";
-
+function CitationEvidencePanel({ source }: { source: CourseChatSource }) {
   return (
     <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
       <div className="flex items-center justify-between gap-3">
@@ -794,7 +686,7 @@ function CitationEvidencePanel({
           <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">
             Highlighted Citation
           </div>
-          <div className="mt-1 truncate text-sm font-semibold">{source.file_name}</div>
+          <div className="mt-1 truncate text-sm font-semibold">Tutor source</div>
         </div>
 
         <Badge className="bg-amber-200 text-amber-900 hover:bg-amber-200">
@@ -805,14 +697,6 @@ function CitationEvidencePanel({
       <mark className="mt-3 block rounded-lg bg-amber-200/80 p-3 text-xs leading-relaxed text-amber-950">
         {source.preview}
       </mark>
-
-      {pageUrl && (
-        <Button asChild size="sm" variant="outline" className="mt-3 w-full bg-background">
-          <a href={pageUrl} target="_blank" rel="noreferrer">
-            <ExternalLink className="h-4 w-4" /> Open cited PDF page
-          </a>
-        </Button>
-      )}
     </div>
   );
 }
@@ -867,7 +751,11 @@ function ChatMessageBubble({
                   <button
                     key={sourceKey(source)}
                     type="button"
-                    title={`${source.file_name}${source.page_number ? `, page ${source.page_number}` : ""}`}
+                    title={
+                      source.page_number
+                        ? `Tutor source, page ${source.page_number}`
+                        : "Tutor source"
+                    }
                     onClick={() => onSelectSource(message.id, source)}
                     className={[
                       "rounded-md border px-2 py-1 text-xs font-semibold transition hover:border-amber-400 hover:bg-amber-50 hover:text-amber-950",

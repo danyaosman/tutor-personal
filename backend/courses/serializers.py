@@ -2,6 +2,8 @@ from rest_framework import serializers
 
 from .models import ClassroomEnrollment, Course, CourseResource, Syllabus
 
+VALID_GRADE_LEVELS = {str(grade) for grade in range(1, 13)}
+
 
 class CourseStudentSerializer(serializers.Serializer):
     id = serializers.IntegerField()
@@ -47,6 +49,12 @@ class CourseSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Status must be draft, active, or archived."
             )
+        return normalized_value
+
+    def validate_grade_level(self, value):
+        normalized_value = value.strip()
+        if normalized_value not in VALID_GRADE_LEVELS:
+            raise serializers.ValidationError("Grade level must be a number from 1 to 12.")
         return normalized_value
 
 
@@ -138,4 +146,4 @@ class SyllabusSerializer(serializers.ModelSerializer):
 
 
 class SyllabusGenerateSerializer(serializers.Serializer):
-    notes = serializers.CharField(required=False, allow_blank=True, max_length=1000)
+    notes = serializers.CharField(required=False, allow_blank=True, max_length=10000)

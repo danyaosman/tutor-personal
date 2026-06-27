@@ -88,6 +88,24 @@ class CourseAPITests(APITestCase):
         self.assertEqual(created_course.teacher, self.teacher)
         self.assertEqual(created_course.status, "draft")
 
+    def test_tutor_cannot_create_course_with_invalid_grade(self):
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.post(
+            reverse("course-list-create"),
+            {
+                "title": "Data Structures",
+                "description": "Core data structures and algorithms.",
+                "subject": "Computer Science",
+                "grade_level": "13",
+                "status": "draft",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("grade_level", response.data)
+
     def test_student_cannot_manage_courses(self):
         self.client.force_authenticate(user=self.student)
 
@@ -117,6 +135,16 @@ class CourseAPITests(APITestCase):
         self.course.refresh_from_db()
         self.assertEqual(self.course.status, "active")
 
+    def test_tutor_deletes_owned_course(self):
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.delete(
+            reverse("course-detail", kwargs={"pk": self.course.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Course.objects.filter(id=self.course.id).exists())
+
     def test_student_catalog_lists_only_active_courses(self):
         self.client.force_authenticate(user=self.student)
 
@@ -143,6 +171,32 @@ class CourseAPITests(APITestCase):
                 classroom__course=self.other_course,
             ).exists()
         )
+
+    def test_student_unenrolls_from_course(self):
+        classroom = Classroom.objects.create(course=self.other_course, name="Default Class")
+        ClassroomEnrollment.objects.create(student=self.student, classroom=classroom)
+        self.client.force_authenticate(user=self.student)
+
+        response = self.client.delete(
+            reverse("course-enroll", kwargs={"course_pk": self.other_course.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(
+            ClassroomEnrollment.objects.filter(
+                student=self.student,
+                classroom__course=self.other_course,
+            ).exists()
+        )
+
+    def test_student_cannot_unenroll_from_course_they_are_not_enrolled_in(self):
+        self.client.force_authenticate(user=self.student)
+
+        response = self.client.delete(
+            reverse("course-enroll", kwargs={"course_pk": self.other_course.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_student_enrolled_courses_lists_only_their_courses(self):
         self.client.force_authenticate(user=self.student)
@@ -333,12 +387,12 @@ class CourseAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_learner_resource_list_excludes_teacher_style_resources(self):
+    def test_learner_cannot_list_uploaded_course_resources(self):
         classroom = Classroom.objects.create(course=self.course, name="Default Class")
         ClassroomEnrollment.objects.create(student=self.student, classroom=classroom)
         self.course.status = "active"
         self.course.save(update_fields=["status"])
-        content_resource = CourseResource.objects.create(
+        CourseResource.objects.create(
             course=self.course,
             file_name="python-content.pdf",
             file="course_resources/python-content.pdf",
@@ -359,8 +413,7 @@ class CourseAPITests(APITestCase):
             reverse("learner-course-resource-list", kwargs={"course_pk": self.course.id})
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual([item["id"] for item in response.data], [content_resource.id])
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_tutor_retrieves_edits_and_generates_owned_course_syllabus(self):
         CourseResource.objects.create(

@@ -4,6 +4,8 @@ from .models import StudentProfile, TeacherProfile
 
 User = get_user_model()
 
+VALID_GRADE_LEVELS = {str(grade) for grade in range(1, 13)}
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
@@ -30,6 +32,15 @@ class RegisterSerializer(serializers.ModelSerializer):
         if value not in ["student", "teacher"]:
             raise serializers.ValidationError("Role must be student or teacher.")
         return value
+
+    def validate(self, attrs):
+        grade_level = attrs.get("grade_level", "").strip()
+        if attrs.get("role") == User.STUDENT and grade_level and grade_level not in VALID_GRADE_LEVELS:
+            raise serializers.ValidationError(
+                {"grade_level": "Grade level must be a number from 1 to 12."}
+            )
+        attrs["grade_level"] = grade_level
+        return attrs
 
     def create(self, validated_data):
         grade_level = validated_data.pop("grade_level", "")
@@ -154,3 +165,11 @@ class ProfileSerializer(serializers.Serializer):
                 profile.save(update_fields=update_fields + ["updated_at"])
 
         return user
+
+    def validate_grade_level(self, value):
+        if getattr(self.instance, "role", None) == User.TEACHER:
+            return value
+        normalized_value = value.strip()
+        if normalized_value and normalized_value not in VALID_GRADE_LEVELS:
+            raise serializers.ValidationError("Grade level must be a number from 1 to 12.")
+        return normalized_value
