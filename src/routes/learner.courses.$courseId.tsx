@@ -78,6 +78,8 @@ function LearnerCourseNotebook() {
   const [selectedSource, setSelectedSource] = useState<CourseChatSource | null>(null);
   const [studyToolMessage, setStudyToolMessage] = useState("");
 
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
   const streamTimerRef = useRef<ReturnType<typeof window.setInterval> | null>(null);
 
   const enrolledCoursesQuery = useQuery({
@@ -154,6 +156,17 @@ function LearnerCourseNotebook() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    const scrollFrame = window.requestAnimationFrame(() => {
+      chatEndRef.current?.scrollIntoView({
+        block: "end",
+        behavior: "smooth",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(scrollFrame);
+  }, [messages.length, streamingAnswer, activeSteps.length]);
 
   function animateAnswer(answer: string, sources: CourseChatResponse["sources"]) {
     if (streamTimerRef.current) {
@@ -541,15 +554,18 @@ function LearnerCourseNotebook() {
               </Card>
             </div>
 
-            <Card className="min-h-[680px] shadow-soft">
+            <Card className="h-[min(760px,calc(100vh-7rem))] min-h-[640px] shadow-soft">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Bot className="h-5 w-5 text-primary" /> AI Tutor Chat
                 </CardTitle>
               </CardHeader>
 
-              <CardContent className="flex min-h-[590px] flex-col">
-                <div className="flex-1 space-y-4 overflow-y-auto rounded-xl border bg-secondary/20 p-4">
+              <CardContent className="flex h-[calc(100%-76px)] min-h-0 flex-col">
+                <div
+                  ref={chatScrollRef}
+                  className="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-xl border bg-secondary/20 p-4"
+                >
                   {messages.length === 0 && !streamingAnswer && activeSteps.length === 0 && (
                     <div className="grid min-h-[300px] place-items-center text-center">
                       <div>
@@ -599,6 +615,7 @@ function LearnerCourseNotebook() {
                       onSelectSource={setSelectedSource}
                     />
                   )}
+                  <div ref={chatEndRef} />
                 </div>
 
                 {chatMutation.error && (

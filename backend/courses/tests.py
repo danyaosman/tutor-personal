@@ -9,10 +9,13 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from ai_tutor.models import ChatMessage, ChatSession
 from ai_tutor.models import ResourceChunk
 from ai_tutor.services.pdf_service import PDFPageText
+from flashcards.models import Flashcard, FlashcardSet
+from quizzes.models import Quiz, QuizAnswer, QuizAttempt, QuizQuestion
 
-from .models import ClassroomEnrollment, Course, CourseResource
+from .models import Classroom, ClassroomEnrollment, Course, CourseResource
 
 User = get_user_model()
 
@@ -366,6 +369,179 @@ class CourseAPITests(APITestCase):
                 )
             },
             format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_tutor_lists_students_enrolled_in_owned_course(self):
+        classroom = Classroom.objects.create(course=self.course, name="Default Class")
+        ClassroomEnrollment.objects.create(student=self.student, classroom=classroom)
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.get(
+            reverse("course-student-list", kwargs={"course_pk": self.course.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]["id"], self.student.id)
+        self.assertEqual(response.data[0]["username"], self.student.username)
+        self.assertIn("enrolled_at", response.data[0])
+
+    def test_tutor_cannot_list_students_for_another_tutors_course(self):
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.get(
+            reverse("course-student-list", kwargs={"course_pk": self.other_course.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_student_cannot_list_course_students(self):
+        self.client.force_authenticate(user=self.student)
+
+        response = self.client.get(
+            reverse("course-student-list", kwargs={"course_pk": self.course.id})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_tutor_views_enrolled_student_progress(self):
+        classroom = Classroom.objects.create(course=self.course, name="Default Class")
+        ClassroomEnrollment.objects.create(student=self.student, classroom=classroom)
+        quiz = Quiz.objects.create(
+            course=self.course,
+            title="Python Practice Quiz",
+            difficulty_level="medium",
+        )
+        question_one = QuizQuestion.objects.create(
+            quiz=quiz,
+            question_text="What stores values in Python?",
+            options=[{"key": "A", "text": "Variables"}],
+            correct_option="A",
+            explanation="Variables store values.",
+        )
+        question_two = QuizQuestion.objects.create(
+            quiz=quiz,
+            question_text="What groups reusable instructions?",
+            options=[{"key": "B", "text": "Functions"}],
+            correct_option="B",
+            explanation="Functions are reusable.",
+        )
+        attempt = QuizAttempt.objects.create(student=self.student, quiz=quiz, score=50)
+        QuizAnswer.objects.create(
+            attempt=attempt,
+            question=question_one,
+            selected_option="A",
+            is_correct=True,
+        )
+        QuizAnswer.objects.create(
+            attempt=attempt,
+            question=question_two,
+            selected_option="C",
+            is_correct=False,
+        )
+        card_set = FlashcardSet.objects.create(
+            course=self.course,
+            student=self.student,
+            title="Python Cards",
+        )
+        Flashcard.objects.create(set=card_set, front="Variable", back="Stores values")
+        chat_session = ChatSession.objects.create(student=self.student, course=self.course)
+        ChatMessage.objects.create(
+            session=chat_session,
+            sender="student",
+            message_text="Explain functions.",
+        )
+        ChatMessage.objects.create(
+            session=chat_session,
+            sender="ai",
+            message_text="Functions group reusable instructions.",
+        )
+        second_course = Course.objects.create(
+            teacher=self.teacher,
+            title="Advanced Python",
+            description="Go deeper with Python.",
+            subject="Computer Science",
+            grade_level="11",
+            status="active",
+        )
+        second_classroom = Classroom.objects.create(
+            course=second_course,
+            name="Advanced Section",
+        )
+        ClassroomEnrollment.objects.create(
+            student=self.student,
+            classroom=second_classroom,
+        )
+        other_teacher_classroom = Classroom.objects.create(
+            course=self.other_course,
+            name="Other Teacher Section",
+        )
+        ClassroomEnrollment.objects.create(
+            student=self.student,
+            classroom=other_teacher_classroom,
+        )
+        second_quiz = Quiz.objects.create(
+            course=second_course,
+            title="Advanced Quiz",
+            difficulty_level="medium",
+        )
+        QuizAttempt.objects.create(student=self.student, quiz=second_quiz, score=80)
+        CourseResource.objects.create(
+            course=self.course,
+            file_name="python.pdf",
+            file="course_resources/python.pdf",
+            file_size=123,
+            processing_status="completed",
+        )
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.get(
+            reverse(
+                "course-student-progress",
+                kwargs={"course_pk": self.course.id, "student_pk": self.student.id},
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["student"]["id"], self.student.id)
+        self.assertEqual(response.data["quiz_progress"]["quiz_count"], 1)
+        self.assertEqual(response.data["quiz_progress"]["attempt_count"], 1)
+        self.assertEqual(response.data["quiz_progress"]["best_score"], 50)
+        self.assertEqual(response.data["quiz_progress"]["average_score"], 50.0)
+        self.assertEqual(response.data["quiz_progress"]["answered_question_count"], 2)
+        self.assertEqual(response.data["quiz_progress"]["correct_answer_count"], 1)
+        self.assertEqual(response.data["learning_activity"]["flashcard_set_count"], 1)
+        self.assertEqual(response.data["learning_activity"]["flashcard_card_count"], 1)
+        self.assertEqual(response.data["learning_activity"]["chat_session_count"], 1)
+        self.assertEqual(response.data["learning_activity"]["chat_message_count"], 1)
+        self.assertEqual(response.data["learning_activity"]["completed_resource_count"], 1)
+        self.assertEqual(
+            response.data["teacher_course_progress"]["summary"]["course_count"],
+            2,
+        )
+        self.assertEqual(
+            response.data["teacher_course_progress"]["summary"]["attempt_count"],
+            2,
+        )
+        self.assertEqual(
+            response.data["teacher_course_progress"]["summary"]["student_chat_message_count"],
+            1,
+        )
+        self.assertEqual(
+            [course["course"]["title"] for course in response.data["teacher_course_progress"]["courses"]],
+            ["Advanced Python", "Intro to Python"],
+        )
+
+    def test_tutor_cannot_view_progress_for_unenrolled_student(self):
+        self.client.force_authenticate(user=self.teacher)
+
+        response = self.client.get(
+            reverse(
+                "course-student-progress",
+                kwargs={"course_pk": self.course.id, "student_pk": self.student.id},
+            )
         )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

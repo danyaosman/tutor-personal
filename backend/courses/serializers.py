@@ -3,6 +3,19 @@ from rest_framework import serializers
 from .models import ClassroomEnrollment, Course, CourseResource
 
 
+class CourseStudentSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    username = serializers.CharField()
+    email = serializers.EmailField()
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    full_name = serializers.SerializerMethodField()
+    enrolled_at = serializers.DateTimeField()
+
+    def get_full_name(self, obj):
+        return obj.get_full_name() or obj.username
+
+
 class CourseSerializer(serializers.ModelSerializer):
     teacher_name = serializers.SerializerMethodField()
     student_count = serializers.IntegerField(read_only=True, default=0)

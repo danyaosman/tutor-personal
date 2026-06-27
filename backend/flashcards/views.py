@@ -27,10 +27,15 @@ def get_enrolled_course(user, course_pk):
 
 def learner_flashcard_set_queryset(user):
     return (
-        FlashcardSet.objects.filter(student=user, course__status="active")
+        FlashcardSet.objects.filter(
+            student=user,
+            course__status="active",
+            course__classrooms__enrollments__student=user,
+        )
         .select_related("course")
         .prefetch_related("cards")
         .annotate(card_count=Count("cards", distinct=True))
+        .distinct()
         .order_by("-created_at")
     )
 

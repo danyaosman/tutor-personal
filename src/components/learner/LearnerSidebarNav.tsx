@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { BookOpen, GraduationCap, HelpCircle, Layers, LogOut, Send } from "lucide-react";
+import { BookOpen, GraduationCap, HelpCircle, Layers, LogOut } from "lucide-react";
 import { currentUserQueryKey, useCurrentUser } from "@/hooks/use-current-user";
 import { clearSession } from "@/lib/api";
 
@@ -10,7 +10,6 @@ const nav: NavItem[] = [
   { to: "/learner/courses", label: "My Courses", icon: BookOpen },
   { to: "/learner/quizzes", label: "Quizzes", icon: HelpCircle },
   { to: "/learner/flashcards", label: "Flashcards", icon: Layers },
-  { to: "/learner/ask", label: "Ask a Tutor", icon: Send },
 ];
 
 export function LearnerSidebarNav() {

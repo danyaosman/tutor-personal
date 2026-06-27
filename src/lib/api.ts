@@ -172,6 +172,114 @@ export interface UpdateCourseResourceInput {
   is_style_example?: boolean;
 }
 
+export interface CourseStudent {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  enrolled_at: string;
+}
+
+export interface CourseProgressStats {
+  course: {
+    id: number;
+    title: string;
+    status: CourseStatus;
+  };
+  quiz_progress: {
+    quiz_count: number;
+    attempt_count: number;
+    best_score: number | null;
+    average_score: number | null;
+    answered_question_count: number;
+    correct_answer_count: number;
+    latest_attempt_at: string | null;
+  };
+  learning_activity: {
+    flashcard_set_count: number;
+    flashcard_card_count: number;
+    chat_session_count: number;
+    chat_message_count: number;
+    completed_resource_count: number;
+    latest_chat_at: string | null;
+  };
+}
+
+export interface CourseStudentProgress {
+  student: {
+    id: number;
+    username: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    full_name: string;
+  };
+  course: {
+    id: number;
+    title: string;
+    status: CourseStatus;
+  };
+  enrollment: {
+    classroom_id: number;
+    classroom_name: string;
+    enrolled_at: string;
+  };
+  quiz_progress: {
+    quiz_count: number;
+    attempt_count: number;
+    best_score: number | null;
+    average_score: number | null;
+    answered_question_count: number;
+    correct_answer_count: number;
+    latest_attempt_at: string | null;
+  };
+  learning_activity: {
+    flashcard_set_count: number;
+    flashcard_card_count: number;
+    chat_session_count: number;
+    chat_message_count: number;
+    completed_resource_count: number;
+    latest_chat_at: string | null;
+  };
+  teacher_course_progress: {
+    summary: {
+      course_count: number;
+      attempt_count: number;
+      student_chat_message_count: number;
+      flashcard_card_count: number;
+      weighted_average_score: number | null;
+    };
+    courses: CourseProgressStats[];
+  };
+}
+
+export interface WeakTopic {
+  question_id: number;
+  quiz_id: number;
+  quiz_title: string;
+  topic: string;
+  miss_count: number;
+  selected_options: string[];
+  selected_choices: { key: string; text: string }[];
+  correct_option: string;
+  correct_choice: string;
+  explanation: string;
+}
+
+export interface WeaknessReport {
+  id: number;
+  student_id: number;
+  student_username: string;
+  student_name: string;
+  course_id: number;
+  course_title: string;
+  weakness_summary: string;
+  weak_topics: WeakTopic[];
+  generated_at: string;
+}
+
 export interface CourseChatSource {
   resource_id: number;
   file_name: string;
@@ -276,6 +384,30 @@ export function uploadCourseResource(courseId: number, file: File) {
     method: "POST",
     body,
   });
+}
+
+export function listCourseStudents(courseId: number) {
+  return apiRequest<CourseStudent[]>(`/api/courses/${courseId}/students/`);
+}
+
+export function getCourseStudentProgress(courseId: number, studentId: number) {
+  return apiRequest<CourseStudentProgress>(
+    `/api/courses/${courseId}/students/${studentId}/progress/`,
+  );
+}
+
+export function listCourseWeaknessReports(courseId: number) {
+  return apiRequest<WeaknessReport[]>(`/api/analytics/courses/${courseId}/weakness-reports/`);
+}
+
+export function generateCourseWeaknessReports(courseId: number, studentId?: number) {
+  return apiRequest<WeaknessReport[]>(
+    `/api/analytics/courses/${courseId}/weakness-reports/generate/`,
+    {
+      method: "POST",
+      body: JSON.stringify(studentId ? { student_id: studentId } : {}),
+    },
+  );
 }
 
 export function resolveFileUrl(fileUrl: string) {

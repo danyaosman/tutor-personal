@@ -119,6 +119,24 @@ class FlashcardAPITests(APITestCase):
             front="Hidden",
             back="Hidden",
         )
+        unenrolled_course = Course.objects.create(
+            teacher=self.teacher,
+            title="Chemistry Basics",
+            description="Learn chemistry.",
+            subject="Science",
+            grade_level="10",
+            status="active",
+        )
+        unenrolled_set = FlashcardSet.objects.create(
+            course=unenrolled_course,
+            student=self.student,
+            title="Stale Chemistry Flashcards",
+        )
+        Flashcard.objects.create(
+            set=unenrolled_set,
+            front="Atom",
+            back="Matter unit.",
+        )
         self.client.force_authenticate(user=self.student)
 
         list_response = self.client.get(reverse("learner-flashcard-set-list"))
@@ -128,6 +146,9 @@ class FlashcardAPITests(APITestCase):
         hidden_response = self.client.get(
             reverse("learner-flashcard-set-detail", kwargs={"set_pk": other_set.id})
         )
+        unenrolled_response = self.client.get(
+            reverse("learner-flashcard-set-detail", kwargs={"set_pk": unenrolled_set.id})
+        )
 
         self.assertEqual(list_response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(list_response.data), 1)
@@ -135,6 +156,7 @@ class FlashcardAPITests(APITestCase):
         self.assertEqual(detail_response.status_code, status.HTTP_200_OK)
         self.assertEqual(detail_response.data["cards"][0]["front"], "What are cells?")
         self.assertEqual(hidden_response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(unenrolled_response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_tutor_cannot_use_learner_flashcard_generation(self):
         self.client.force_authenticate(user=self.teacher)

@@ -6,7 +6,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getFlashcardSet, listFlashcardSets } from "@/lib/api";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { getFlashcardSet, listEnrolledCourses, listFlashcardSets } from "@/lib/api";
 import { ArrowLeft, ArrowRight, Layers, Loader2, RotateCcw } from "lucide-react";
 
 export const Route = createFileRoute("/learner/flashcards")({
@@ -18,11 +25,22 @@ function LearnerFlashcards() {
   const [activeSetId, setActiveSetId] = useState<number | null>(null);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [selectedCourseId, setSelectedCourseId] = useState("all");
+
+  const coursesQuery = useQuery({
+    queryKey: ["learner-enrolled-courses"],
+    queryFn: listEnrolledCourses,
+  });
 
   const setsQuery = useQuery({
     queryKey: ["learner-flashcard-sets"],
     queryFn: listFlashcardSets,
   });
+
+  const filteredSets =
+    setsQuery.data?.filter(
+      (set) => selectedCourseId === "all" || set.course_id === Number(selectedCourseId),
+    ) ?? [];
 
   const detailQuery = useQuery({
     queryKey: ["learner-flashcard-set", activeSetId],
@@ -31,10 +49,14 @@ function LearnerFlashcards() {
   });
 
   useEffect(() => {
-    if (!activeSetId && setsQuery.data?.[0]) {
-      setActiveSetId(setsQuery.data[0].id);
+    if (filteredSets.length === 0) {
+      setActiveSetId(null);
+      return;
     }
-  }, [activeSetId, setsQuery.data]);
+    if (!activeSetId || !filteredSets.some((set) => set.id === activeSetId)) {
+      setActiveSetId(filteredSets[0].id);
+    }
+  }, [activeSetId, filteredSets]);
 
   useEffect(() => {
     setActiveCardIndex(0);
@@ -65,6 +87,24 @@ function LearnerFlashcards() {
         </Button>
       }
     >
+      {(setsQuery.data?.length ?? 0) > 0 && (
+        <div className="flex justify-end mb-5">
+          <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
+            <SelectTrigger className="w-full sm:w-[280px]">
+              <SelectValue placeholder="Filter by course" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All enrolled courses</SelectItem>
+              {coursesQuery.data?.map((course) => (
+                <SelectItem key={course.id} value={String(course.id)}>
+                  {course.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {setsQuery.isPending && (
         <Card className="border-dashed p-8 text-center text-sm text-muted-foreground">
           Loading flashcard sets...
@@ -90,7 +130,13 @@ function LearnerFlashcards() {
         </Card>
       )}
 
-      {(setsQuery.data?.length ?? 0) > 0 && (
+      {(setsQuery.data?.length ?? 0) > 0 && filteredSets.length === 0 && (
+        <Card className="border-dashed p-8 text-center text-sm text-muted-foreground">
+          No flashcard sets match this course filter.
+        </Card>
+      )}
+
+      {filteredSets.length > 0 && (
         <div className="grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
           <Card className="h-fit shadow-soft">
             <CardHeader>
@@ -99,7 +145,7 @@ function LearnerFlashcards() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {setsQuery.data?.map((set) => (
+              {filteredSets.map((set) => (
                 <button
                   key={set.id}
                   type="button"

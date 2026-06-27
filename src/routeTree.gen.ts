@@ -36,7 +36,6 @@ import { Route as LearnerProgressRouteImport } from './routes/learner.progress'
 import { Route as LearnerFlashcardsRouteImport } from './routes/learner.flashcards'
 import { Route as LearnerCoursesRouteImport } from './routes/learner.courses'
 import { Route as LearnerAssignmentsRouteImport } from './routes/learner.assignments'
-import { Route as LearnerAskRouteImport } from './routes/learner.ask'
 import { Route as TutorCoursesCourseIdRouteImport } from './routes/tutor.courses.$courseId'
 import { Route as LearnerCoursesCourseIdRouteImport } from './routes/learner.courses.$courseId'
 
@@ -175,11 +174,6 @@ const LearnerAssignmentsRoute = LearnerAssignmentsRouteImport.update({
   path: '/assignments',
   getParentRoute: () => LearnerRoute,
 } as any)
-const LearnerAskRoute = LearnerAskRouteImport.update({
-  id: '/ask',
-  path: '/ask',
-  getParentRoute: () => LearnerRoute,
-} as any)
 const TutorCoursesCourseIdRoute = TutorCoursesCourseIdRouteImport.update({
   id: '/$courseId',
   path: '/$courseId',
@@ -197,7 +191,6 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/select-role': typeof SelectRoleRoute
-  '/learner/ask': typeof LearnerAskRoute
   '/learner/assignments': typeof LearnerAssignmentsRoute
   '/learner/courses': typeof LearnerCoursesRouteWithChildren
   '/learner/flashcards': typeof LearnerFlashcardsRoute
@@ -228,7 +221,6 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/select-role': typeof SelectRoleRoute
-  '/learner/ask': typeof LearnerAskRoute
   '/learner/assignments': typeof LearnerAssignmentsRoute
   '/learner/courses': typeof LearnerCoursesRouteWithChildren
   '/learner/flashcards': typeof LearnerFlashcardsRoute
@@ -261,7 +253,6 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/select-role': typeof SelectRoleRoute
-  '/learner/ask': typeof LearnerAskRoute
   '/learner/assignments': typeof LearnerAssignmentsRoute
   '/learner/courses': typeof LearnerCoursesRouteWithChildren
   '/learner/flashcards': typeof LearnerFlashcardsRoute
@@ -295,7 +286,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/select-role'
-    | '/learner/ask'
     | '/learner/assignments'
     | '/learner/courses'
     | '/learner/flashcards'
@@ -326,7 +316,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/select-role'
-    | '/learner/ask'
     | '/learner/assignments'
     | '/learner/courses'
     | '/learner/flashcards'
@@ -358,7 +347,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/select-role'
-    | '/learner/ask'
     | '/learner/assignments'
     | '/learner/courses'
     | '/learner/flashcards'
@@ -595,13 +583,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LearnerAssignmentsRouteImport
       parentRoute: typeof LearnerRoute
     }
-    '/learner/ask': {
-      id: '/learner/ask'
-      path: '/ask'
-      fullPath: '/learner/ask'
-      preLoaderRoute: typeof LearnerAskRouteImport
-      parentRoute: typeof LearnerRoute
-    }
     '/tutor/courses/$courseId': {
       id: '/tutor/courses/$courseId'
       path: '/$courseId'
@@ -632,7 +613,6 @@ const LearnerCoursesRouteWithChildren = LearnerCoursesRoute._addFileChildren(
 )
 
 interface LearnerRouteChildren {
-  LearnerAskRoute: typeof LearnerAskRoute
   LearnerAssignmentsRoute: typeof LearnerAssignmentsRoute
   LearnerCoursesRoute: typeof LearnerCoursesRouteWithChildren
   LearnerFlashcardsRoute: typeof LearnerFlashcardsRoute
@@ -647,7 +627,6 @@ interface LearnerRouteChildren {
 }
 
 const LearnerRouteChildren: LearnerRouteChildren = {
-  LearnerAskRoute: LearnerAskRoute,
   LearnerAssignmentsRoute: LearnerAssignmentsRoute,
   LearnerCoursesRoute: LearnerCoursesRouteWithChildren,
   LearnerFlashcardsRoute: LearnerFlashcardsRoute,

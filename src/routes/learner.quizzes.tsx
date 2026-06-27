@@ -25,12 +25,20 @@ import {
 } from "@/components/ui/table";
 import {
   getQuiz,
+  listEnrolledCourses,
   listQuizzes,
   submitQuizAttempt,
   type QuizAttemptResult,
   type QuizDetail,
 } from "@/lib/api";
 import { CheckCircle2, Loader2, Play, RotateCcw, XCircle } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const Route = createFileRoute("/learner/quizzes")({
   head: () => ({ meta: [{ title: "Quizzes - AI Tutor" }] }),
@@ -40,8 +48,14 @@ export const Route = createFileRoute("/learner/quizzes")({
 function LearnerQuizzes() {
   const queryClient = useQueryClient();
   const [activeQuizId, setActiveQuizId] = useState<number | null>(null);
+  const [selectedCourseId, setSelectedCourseId] = useState("all");
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [result, setResult] = useState<QuizAttemptResult | null>(null);
+
+  const coursesQuery = useQuery({
+    queryKey: ["learner-enrolled-courses"],
+    queryFn: listEnrolledCourses,
+  });
 
   const quizzesQuery = useQuery({
     queryKey: ["learner-quizzes"],
@@ -77,6 +91,10 @@ function LearnerQuizzes() {
   const activeQuiz = quizDetailQuery.data;
   const answeredCount = activeQuiz?.questions.filter((question) => answers[question.id]).length ?? 0;
   const canSubmit = Boolean(activeQuiz) && answeredCount === activeQuiz!.questions.length;
+  const filteredQuizzes =
+    quizzesQuery.data?.filter(
+      (quiz) => selectedCourseId === "all" || quiz.course_id === Number(selectedCourseId),
+    ) ?? [];
 
   return (
     <LearnerLayout
@@ -88,6 +106,24 @@ function LearnerQuizzes() {
         </Button>
       }
     >
+      {(quizzesQuery.data?.length ?? 0) > 0 && (
+        <div className="flex justify-end mb-5">
+          <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
+            <SelectTrigger className="w-full sm:w-[280px]">
+              <SelectValue placeholder="Filter by course" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All enrolled courses</SelectItem>
+              {coursesQuery.data?.map((course) => (
+                <SelectItem key={course.id} value={String(course.id)}>
+                  {course.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {quizzesQuery.isPending && (
         <Card className="border-dashed p-8 text-center text-sm text-muted-foreground">
           Loading quizzes...
@@ -112,7 +148,13 @@ function LearnerQuizzes() {
         </Card>
       )}
 
-      {(quizzesQuery.data?.length ?? 0) > 0 && (
+      {(quizzesQuery.data?.length ?? 0) > 0 && filteredQuizzes.length === 0 && (
+        <Card className="border-dashed p-8 text-center text-sm text-muted-foreground">
+          No quizzes match this course filter.
+        </Card>
+      )}
+
+      {filteredQuizzes.length > 0 && (
         <Card className="shadow-soft">
           <Table>
             <TableHeader>
@@ -127,7 +169,7 @@ function LearnerQuizzes() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {quizzesQuery.data?.map((quiz) => {
+              {filteredQuizzes.map((quiz) => {
                 const completed = quiz.attempt_count > 0;
 
                 return (
