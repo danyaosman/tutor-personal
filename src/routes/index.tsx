@@ -1,50 +1,163 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Sparkles, ArrowRight } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { getRoleHome, hasSession } from "@/lib/api";
+import { EduFooter, LanguageToggle, PageLoader, useEduLang } from "@/lib/edumindUi";
 
 export const Route = createFileRoute("/")({
   component: Landing,
 });
 
 function Landing() {
+  const navigate = useNavigate();
+  const { lang, setLang, dir } = useEduLang();
+  const [loading, setLoading] = useState(false);
+  const currentUser = useCurrentUser();
+
+  useEffect(() => {
+    if (hasSession() && currentUser.data) {
+      void navigate({ to: getRoleHome(currentUser.data.role), replace: true });
+    }
+  }, [currentUser.data, navigate]);
+
+  function go(to: "/login" | "/select-role" | "/register", role?: "teacher" | "student") {
+    setLoading(true);
+    window.setTimeout(() => {
+      if (role) {
+        void navigate({ to, search: { role } });
+        return;
+      }
+      void navigate({ to });
+    }, 350);
+  }
+
+  const steps = [
+    {
+      number: "01",
+      title: "Teacher creates a course",
+      desc: "Course information, grade, description, goals, and resources stay connected to the backend.",
+    },
+    {
+      number: "02",
+      title: "Uploads resources",
+      desc: "PDF files become searchable course knowledge for student questions.",
+    },
+    {
+      number: "03",
+      title: "Digital Twin teaches",
+      desc: "The AI answers using course material and teacher guidance.",
+    },
+    {
+      number: "04",
+      title: "Practice finds gaps",
+      desc: "Quizzes, flashcards, and progress views help students review weak topics.",
+    },
+  ];
+
+  const flowItems = ["Upload PDF", "Add teaching style", "AI Tutor teaches", "Weak topics appear"];
+
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background">
-      <div className="pointer-events-none absolute inset-0 gradient-ai-soft opacity-60" />
-      <div className="pointer-events-none absolute -top-40 left-1/3 h-[28rem] w-[28rem] rounded-full gradient-ai opacity-30 blur-3xl" />
+    <main className="em-landing" dir={dir}>
+      {loading && <PageLoader />}
+      <div className="em-bg-orb em-orb-one" />
+      <div className="em-bg-orb em-orb-two" />
 
-      <header className="relative z-10 flex items-center justify-between px-6 py-5 sm:px-10">
-        <div className="flex items-center gap-2">
-          <div className="grid h-9 w-9 place-items-center rounded-xl gradient-ai shadow-glow">
-            <Sparkles className="h-5 w-5 text-white" />
+      <section className="em-shell">
+        <nav className="em-nav">
+          <h2>EduMind</h2>
+          <div>
+            <LanguageToggle lang={lang} setLang={setLang} />
+            <button type="button" onClick={() => go("/login")}>
+              Login
+            </button>
+            <button type="button" className="em-nav-cta" onClick={() => go("/select-role")}>
+              Get Started
+            </button>
           </div>
-          <span className="text-lg font-extrabold tracking-tight">AI Tutor</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link to="/login" className="rounded-md px-3 py-2 text-sm font-medium hover:bg-accent">Sign in</Link>
-          <Link to="/register" className="rounded-md gradient-ai px-4 py-2 text-sm font-semibold text-white shadow-glow hover:opacity-90">
-            Get started
-          </Link>
-        </div>
-      </header>
+        </nav>
 
-      <main className="relative z-10 mx-auto max-w-4xl px-6 pb-20 pt-16 text-center sm:pt-24">
-        <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/70 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Personalized AI tutoring, built by educators
-        </span>
-        <h1 className="mt-6 text-4xl font-extrabold tracking-tight sm:text-6xl">
-          Teach with your own <span className="text-gradient-ai">AI twin</span>.
-        </h1>
-        <p className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground sm:text-lg">
-          Build a digital teaching twin trained on your style, materials, and voice — so every student gets a personal tutor that sounds like you.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link to="/register" className="inline-flex items-center gap-2 rounded-lg gradient-ai px-5 py-3 text-sm font-semibold text-white shadow-glow hover:opacity-90">
-            Create your twin <ArrowRight className="h-4 w-4" />
-          </Link>
-          <Link to="/login" className="inline-flex items-center gap-2 rounded-lg border border-input bg-card/70 px-5 py-3 text-sm font-semibold backdrop-blur hover:bg-accent">
-            Sign in
-          </Link>
-        </div>
-      </main>
-    </div>
+        <section className="em-hero em-page-enter">
+          <div className="em-hero-copy">
+            <span className="em-eyebrow">AI Tutor - Digital Twin Learning</span>
+            <h1>
+              Learn from a teacher's
+              <br />
+              <span>Digital Twin</span>
+            </h1>
+            <p>
+              EduMind helps teachers turn course resources and teaching style into an AI
+              learning experience. Students can ask questions, take quizzes, and review the
+              topics they need to improve.
+            </p>
+            <div className="em-hero-actions">
+              <button type="button" className="em-btn em-btn-primary" onClick={() => go("/register", "teacher")}>
+                Join as Teacher
+              </button>
+              <button type="button" className="em-btn em-btn-soft" onClick={() => go("/register", "student")}>
+                Join as Student
+              </button>
+            </div>
+          </div>
+
+          <div className="em-visual-card">
+            <div className="em-card-header">
+              <span />
+              <span />
+              <span />
+            </div>
+            <div className="em-twin-badge">Digital Twin Ready</div>
+            <div className="em-flow-line">
+              {flowItems.map((item, index) => (
+                <div key={item}>
+                  <strong>{String(index + 1).padStart(2, "0")}</strong>
+                  <p>{item}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="em-section">
+          <div className="em-section-title">
+            <span>How it works</span>
+            <h2>One course becomes a personalized AI learning space</h2>
+          </div>
+          <div className="em-steps">
+            {steps.map((step) => (
+              <article key={step.number}>
+                <span>{step.number}</span>
+                <h3>{step.title}</h3>
+                <p>{step.desc}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="em-roles">
+          <div className="em-role em-role-tutor">
+            <div>
+              <span>Teacher</span>
+              <h3>Build your teaching twin</h3>
+              <p>Create courses, upload PDFs, add teaching instructions, and follow student progress.</p>
+            </div>
+            <button type="button" className="em-btn em-btn-light" onClick={() => go("/register", "teacher")}>
+              Join as Teacher
+            </button>
+          </div>
+          <div className="em-role em-role-learner">
+            <div>
+              <span>Student</span>
+              <h3>Learn with AI support</h3>
+              <p>Join courses, ask the AI Tutor questions, take quizzes, and improve weak topics.</p>
+            </div>
+            <button type="button" className="em-btn em-btn-soft" onClick={() => go("/register", "student")}>
+              Join as Student
+            </button>
+          </div>
+        </section>
+
+        <EduFooter lang={lang} />
+      </section>
+    </main>
   );
 }

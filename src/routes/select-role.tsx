@@ -1,80 +1,95 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BookOpenCheck, GraduationCap, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpenCheck, GraduationCap } from "lucide-react";
+import { EduFooter, LanguageToggle, useEduLang } from "@/lib/edumindUi";
 
 export const Route = createFileRoute("/select-role")({
   component: SelectRole,
 });
 
 function SelectRole() {
+  const { lang, setLang, dir } = useEduLang();
+
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background">
-      <div className="pointer-events-none absolute inset-0 gradient-ai-soft opacity-70" />
-      <div className="pointer-events-none absolute -left-40 -top-40 h-96 w-96 rounded-full gradient-ai opacity-30 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-40 -right-40 h-96 w-96 rounded-full gradient-ai opacity-20 blur-3xl" />
+    <main className="em-auth-page" dir={dir}>
+      <div className="em-bg-orb em-orb-one" />
+      <div className="em-bg-orb em-orb-two" />
 
-      <div className="relative mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-4 py-10">
-        <Link to="/" className="mb-8 flex items-center gap-2">
-          <div className="grid h-10 w-10 place-items-center rounded-xl gradient-ai shadow-glow">
-            <Sparkles className="h-5 w-5 text-white" />
+      <section className="em-auth-shell">
+        <nav className="em-auth-nav">
+          <Link to="/" className="em-auth-logo">
+            EduMind
+          </Link>
+          <div className="em-auth-nav-actions">
+            <LanguageToggle lang={lang} setLang={setLang} />
+            <Link to="/login" className="em-auth-nav-link">
+              Login
+            </Link>
           </div>
-          <span className="text-xl font-extrabold tracking-tight">AI Tutor</span>
-        </Link>
+        </nav>
 
-        <h1 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">
-          How will you use AI Tutor?
-        </h1>
-        <p className="mt-3 max-w-xl text-center text-muted-foreground">
-          Choose the workspace that matches the backend-supported demo flow.
-        </p>
+        <header className="em-dashboard-hero em-page-enter">
+          <div>
+            <span>Choose your workspace</span>
+            <h1>How will you use EduMind?</h1>
+            <p>Choose the backend-supported role for the demo flow: teacher or student.</p>
+          </div>
+        </header>
 
-        <div className="mt-10 grid w-full gap-5 sm:grid-cols-2">
+        <section className="em-roles">
           <RoleCard
-            to="/tutor/courses"
+            to="/register"
+            search={{ role: "teacher" }}
             icon={<GraduationCap className="h-7 w-7" />}
-            title="I'm a Tutor"
-            description="Create courses, upload PDFs, and prepare materials learners use with AI."
-            cta="Enter tutor workspace"
+            badge="Teacher"
+            title="Build courses and Digital Twins"
+            description="Create courses, upload PDFs, tune teaching guidance, and inspect student progress."
+            cta="Create teacher account"
           />
           <RoleCard
-            to="/learner/courses"
+            to="/register"
+            search={{ role: "student" }}
             icon={<BookOpenCheck className="h-7 w-7" />}
-            title="I'm a Learner"
+            badge="Student"
+            title="Learn with AI support"
             description="Enroll in courses, ask the AI tutor, take quizzes, and review flashcards."
-            cta="Go to learner space"
+            cta="Create student account"
           />
-        </div>
-      </div>
-    </div>
+        </section>
+
+        <EduFooter lang={lang} />
+      </section>
+    </main>
   );
 }
 
 function RoleCard({
   to,
+  search,
   icon,
+  badge,
   title,
   description,
   cta,
 }: {
-  to: string;
+  to: "/register";
+  search: { role: "teacher" | "student" };
   icon: React.ReactNode;
+  badge: string;
   title: string;
   description: string;
   cta: string;
 }) {
   return (
-    <Link
-      to={to}
-      className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card/80 p-7 shadow-soft backdrop-blur-md transition hover:-translate-y-1 hover:shadow-glow"
-    >
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-cyan-500/10 opacity-0 transition group-hover:opacity-100" />
-      <div className="relative">
-        <div className="grid h-14 w-14 place-items-center rounded-2xl gradient-ai text-white shadow-glow">
+    <Link to={to} search={search} className="em-role em-role-learner">
+      <div>
+        <span>{badge}</span>
+        <div className="mt-4 grid h-14 w-14 place-items-center rounded-lg gradient-ai text-white shadow-glow">
           {icon}
         </div>
-        <h3 className="mt-5 text-xl font-bold tracking-tight">{title}</h3>
-        <p className="mt-2 text-sm text-muted-foreground">{description}</p>
-        <div className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
-          {cta} <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+        <h3>{title}</h3>
+        <p>{description}</p>
+        <div className="mt-6 inline-flex items-center gap-1.5 text-sm font-black text-primary">
+          {cta} <ArrowRight className="h-4 w-4" />
         </div>
       </div>
     </Link>

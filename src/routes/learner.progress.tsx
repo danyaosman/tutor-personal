@@ -123,7 +123,7 @@ function LearnerProgressPage() {
                   <MiniStat label="Attempts" value={String(course.attempt_count)} />
                   <MiniStat label="Best" value={formatScore(course.best_score)} />
                   <MiniStat label="Average" value={formatScore(course.average_score)} />
-                  <Button asChild size="sm" variant="outline">
+                  <Button asChild size="sm" className="gradient-ai text-white shadow-glow">
                     <Link to="/learner/courses/$courseId" params={{ courseId: String(course.id) }}>
                       Open
                     </Link>

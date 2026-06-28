@@ -38,9 +38,9 @@ export function LearnerSidebarNav() {
     .toUpperCase();
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[260px] flex-col border-r border-sidebar-border gradient-sidebar md:flex">
-      <div className="flex h-16 items-center gap-2 border-b border-sidebar-border px-5">
-        <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-glow">
+    <aside className="ed-sidebar fixed inset-y-0 left-0 z-30 hidden w-[260px] flex-col md:flex">
+      <div className="ed-sidebar-brand flex h-16 items-center gap-2 px-5">
+        <div className="ed-brand-mark grid h-9 w-9 place-items-center rounded-lg">
           <GraduationCap className="h-5 w-5 text-white" />
         </div>
         <div className="leading-tight">
@@ -57,10 +57,8 @@ export function LearnerSidebarNav() {
               key={to}
               to={to}
               className={[
-                "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
-                active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-soft"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                "ed-sidebar-link group flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all",
+                active ? "is-active" : "",
               ].join(" ")}
             >
               <Icon
@@ -75,9 +73,9 @@ export function LearnerSidebarNav() {
         })}
       </nav>
 
-      <div className="border-t border-sidebar-border p-3">
+      <div className="ed-user-card p-3">
         <div className="flex items-center gap-3 rounded-lg p-2">
-          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-xs font-bold text-white">
+          <div className="ed-brand-mark grid h-9 w-9 shrink-0 place-items-center rounded-full text-xs font-bold text-white">
             {initials}
           </div>
           <div className="min-w-0 flex-1">

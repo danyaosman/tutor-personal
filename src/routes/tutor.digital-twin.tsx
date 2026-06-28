@@ -48,6 +48,7 @@ import {
   type CourseResource,
   type TeachingStyleExample,
 } from "@/lib/api";
+import { translateUiText } from "@/lib/edumindUi";
 
 type DigitalTwinSearch = {
   courseId?: number;
@@ -600,7 +601,7 @@ function TeachingStyleExampleRow({
             className="text-destructive hover:text-destructive"
             disabled={deleteExampleMutation.isPending}
             onClick={() => {
-              if (window.confirm("Delete this teaching style example?")) {
+              if (window.confirm(translateUiText("Delete this teaching style example?"))) {
                 deleteExampleMutation.mutate(example.id);
               }
             }}
@@ -676,7 +677,11 @@ function StyleResourceRow({
             className="text-destructive hover:text-destructive"
             disabled={deleteResourceMutation.isPending}
             onClick={() => {
-              if (window.confirm(`Delete "${resource.file_name}" from style files?`)) {
+              if (
+                window.confirm(
+                  translateUiText(`Delete "${resource.file_name}" from style files?`),
+                )
+              ) {
                 deleteResourceMutation.mutate(resource.id);
               }
             }}

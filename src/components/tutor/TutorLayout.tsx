@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
-import { SidebarNav } from "./SidebarNav";
+import { useQueryClient } from "@tanstack/react-query";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { useRequireRole } from "@/hooks/use-require-role";
+import { currentUserQueryKey, useCurrentUser } from "@/hooks/use-current-user";
+import { clearSession } from "@/lib/api";
+import { EduFooter, LanguageToggle, useEduLang } from "@/lib/edumindUi";
 
 export function TutorLayout({
   title,
@@ -14,24 +18,67 @@ export function TutorLayout({
   children: ReactNode;
 }) {
   const { isAuthorized } = useRequireRole("teacher");
+  const { lang, setLang, dir } = useEduLang();
+  const queryClient = useQueryClient();
+  const { data: user } = useCurrentUser();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const dashboardPath = user?.role === "teacher" ? "/tutor/courses" : "/login";
+  const navItems = [
+    { to: "/tutor/courses", label: "Courses" },
+    { to: "/tutor/digital-twin", label: "Digital Twin" },
+    { to: "/tutor/syllabus", label: "Syllabus" },
+    { to: "/tutor/analytics", label: "Analytics" },
+    { to: "/tutor/settings", label: "Settings" },
+  ] as const;
 
   if (!isAuthorized) {
     return <div className="min-h-screen bg-background" />;
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <SidebarNav />
-      <div className="md:pl-[260px]">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-md sm:px-6">
-          <div className="md:hidden text-sm font-semibold">AI Tutor</div>
-          <div className="ml-auto text-xs font-medium text-muted-foreground">
-            Course workspace
+    <main className="em-app-page" dir={dir}>
+      <div className="em-bg-orb em-orb-one" />
+      <div className="em-bg-orb em-orb-two" />
+      <section className="em-app-shell">
+        <nav className="em-app-nav">
+          <Link to={dashboardPath} className="em-app-logo">
+            EduMind
+          </Link>
+          <div>
+            <LanguageToggle lang={lang} setLang={setLang} />
+            {navItems.map((item) => {
+              const active = pathname === item.to || pathname.startsWith(`${item.to}/`);
+              return (
+                <Link key={item.to} to={item.to} className={active ? "is-active" : ""}>
+                  {item.label}
+                </Link>
+              );
+            })}
+            <Link
+              to="/login"
+              onClick={() => {
+                clearSession();
+                queryClient.removeQueries({ queryKey: currentUserQueryKey });
+              }}
+            >
+              Logout
+            </Link>
           </div>
+        </nav>
+
+        <header className="em-dashboard-hero em-page-enter">
+          <div>
+            <span>
+              {user?.username ? `Teacher workspace - ${user.username}` : "Teacher workspace"}
+            </span>
+            <h1>{title}</h1>
+            {subtitle && <p>{subtitle}</p>}
+          </div>
+          {actions && <div className="em-hero-actions">{actions}</div>}
         </header>
 
-        <main className="px-4 py-6 sm:px-6 lg:px-8">
-          <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
+        <main className="em-content-surface">
+          <div className="hidden">
             <div className="min-w-0">
               <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
               {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
@@ -40,7 +87,8 @@ export function TutorLayout({
           </div>
           {children}
         </main>
-      </div>
-    </div>
+        <EduFooter lang={lang} />
+      </section>
+    </main>
   );
 }
