@@ -41,15 +41,19 @@ function LearnerAskPage() {
     const aiMessage: ChatMessage = {
       role: "ai",
       text: isArabic
-        ? `سؤالك ممتاز. بناءً على كورس "${selectedCourse}"، أنصحك أن تراجع الفكرة خطوة بخطوة وتربطها بمثال بسيط. يمكنك أيضاً حل اختبار قصير لمعرفة نقطة الضعف بدقة.`
-        : `Great question. Based on "${selectedCourse}", I recommend reviewing the idea step by step and connecting it to a simple example. You can also take a short quiz to detect the weak point clearly.`,
+        ? `سؤالك ممتاز. بناءً على كورس "${selectedCourse}"، خلينا نبسط الفكرة خطوة بخطوة ونربطها بمثال واضح. بعدين فيك تحل اختبار قصير لتتأكد من فهمك.`
+        : `Great question. Based on "${selectedCourse}", let's simplify the idea step by step and connect it to a clear example. Then you can take a short quiz to check your understanding.`,
     };
 
-    setMessages((currentMessages) => [...currentMessages, learnerMessage, aiMessage]);
+    setMessages((currentMessages) => [
+      ...currentMessages,
+      learnerMessage,
+      aiMessage,
+    ]);
     setQuestion("");
   }
 
-  function handleChange(event: ChangeEvent<HTMLTextAreaElement>) {
+  function handleQuestionChange(event: ChangeEvent<HTMLInputElement>) {
     setQuestion(event.target.value);
   }
 
@@ -72,16 +76,21 @@ function LearnerAskPage() {
     chatDesc: isArabic
       ? "اسأل عن المفاهيم، الأمثلة، أو نقاط الضعف."
       : "Ask about concepts, examples, or weak points.",
-    placeholder: isArabic
-      ? "اكتب سؤالك هنا..."
-      : "Write your question here...",
+    placeholder: isArabic ? "اكتب سؤالك هنا..." : "Write your question here...",
     send: isArabic ? "إرسال السؤال" : "Send Question",
     quickHelp: isArabic ? "اقتراحات سريعة" : "Quick Suggestions",
     suggestion1: isArabic ? "اشرح لي هذا الدرس ببساطة" : "Explain this lesson simply",
     suggestion2: isArabic ? "أعطني مثالاً خطوة بخطوة" : "Give me a step-by-step example",
     suggestion3: isArabic ? "ما أهم نقطة لازم أراجعها؟" : "What should I review first?",
     startQuiz: isArabic ? "ابدأ اختباراً" : "Start a Quiz",
+    sideTitle: isArabic ? "ابدأ من هنا" : "Start from here",
+    sideNote: isArabic
+      ? "اختَر اقتراحاً سريعاً أو اكتب سؤالك بنفسك، وبعد المحادثة يمكنك الانتقال للاختبار لتتأكد من فهمك."
+      : "Pick a quick suggestion or write your own question, then move to the quiz to check your understanding.",
+    you: isArabic ? "أنت" : "You",
   };
+
+  const suggestions = [t.suggestion1, t.suggestion2, t.suggestion3];
 
   return (
     <main className="em-app-page" dir={dir}>
@@ -117,21 +126,28 @@ function LearnerAskPage() {
           </Link>
         </header>
 
-        <section className="em-dashboard-grid">
-          <div className="em-panel">
-            <div className="em-panel-head">
+        <section className="em-chat-layout">
+          <div className="em-chat-panel">
+            <div className="em-chat-top">
               <div>
                 <span>{t.chatTitle}</span>
                 <h2>{t.chatDesc}</h2>
+                <p>{isArabic ? "اختر الكورس ثم اكتب سؤالك بوضوح." : "Choose a course, then write your question clearly."}</p>
               </div>
+
+              <small>{selectedCourse}</small>
             </div>
 
-            <label className="em-builder-copy">
+            <label
+              className="em-wide-field"
+              style={{ marginTop: 0, marginBottom: 18 }}
+            >
               {t.selectCourse}
               <select
                 className="em-search-input"
                 value={selectedCourse}
                 onChange={(event) => setSelectedCourse(event.target.value)}
+                style={{ width: "100%" }}
               >
                 {edCourses.map((course) => (
                   <option key={course.id} value={course.name}>
@@ -141,70 +157,57 @@ function LearnerAskPage() {
               </select>
             </label>
 
-            <div className="em-result-list">
+            <div className="em-chat-box-premium">
               {messages.map((message, index) => (
                 <article
-                  key={index}
+                  key={`${message.role}-${index}`}
                   className={
                     message.role === "ai"
-                      ? "em-result-card"
-                      : "em-result-card em-stat-orange"
+                      ? "em-chat-bubble em-ai-bubble"
+                      : "em-chat-bubble em-user-bubble"
                   }
                 >
-                  <div>
-                    <h3>{message.role === "ai" ? "EduMind AI" : isArabic ? "أنت" : "You"}</h3>
-                    <p>{message.text}</p>
-                  </div>
+                  <p>{message.text}</p>
+                  <span>{message.role === "ai" ? "EduMind AI" : t.you}</span>
                 </article>
               ))}
             </div>
 
-            <form onSubmit={handleSubmit} className="em-builder-form">
-              <label>
-                {t.ask}
-                <textarea
-                  value={question}
-                  onChange={handleChange}
-                  placeholder={t.placeholder}
-                />
-              </label>
+            <form onSubmit={handleSubmit} className="em-chat-input-premium">
+              <input
+                value={question}
+                onChange={handleQuestionChange}
+                placeholder={t.placeholder}
+              />
 
-              <button type="submit" className="em-btn em-btn-primary em-full-btn">
+              <button type="submit" className="em-btn em-btn-primary">
                 {t.send}
               </button>
             </form>
           </div>
 
-          <div className="em-panel">
-            <div className="em-panel-head">
-              <div>
-                <span>{t.quickHelp}</span>
-                <h2>{isArabic ? "ابدأ من هنا" : "Start from here"}</h2>
-              </div>
+          <aside className="em-chat-side">
+            <div className="em-chat-top" style={{ display: "block" }}>
+              <span>{t.quickHelp}</span>
+              <h2>{t.sideTitle}</h2>
+              <p>{t.sideNote}</p>
             </div>
 
-            <div className="em-topic-cloud">
-              {[t.suggestion1, t.suggestion2, t.suggestion3].map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  onClick={() => setQuestion(suggestion)}
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
-
-            <p className="em-builder-copy">
-              {isArabic
-                ? "بعد المحادثة، يمكنك حل اختبار قصير حتى تعرف إذا فهمت الفكرة أو ما زلت تحتاج مراجعة."
-                : "After chatting, you can take a short quiz to check whether you understood the idea or still need review."}
-            </p>
+            {suggestions.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => setQuestion(suggestion)}
+                style={{ textAlign: isArabic ? "right" : "left" }}
+              >
+                {suggestion}
+              </button>
+            ))}
 
             <Link to="/learner/quizzes" className="em-btn em-btn-primary">
               {t.startQuiz}
             </Link>
-          </div>
+          </aside>
         </section>
 
         <EduFooter lang={lang} />

@@ -7,34 +7,142 @@ export const Route = createFileRoute("/learner/quizzes")({
   component: LearnerQuizzesPage,
 });
 
+type QuizQuestion = {
+  id: number;
+  topic: string;
+  question: string;
+  type: "choice" | "free-text";
+  options?: string[];
+  correctAnswer: string;
+  acceptedAnswers?: string[];
+  explanation: string;
+};
+
+type QuizReviewItem = {
+  question: string;
+  userAnswer: string;
+  correctAnswer: string;
+  isCorrect: boolean;
+  explanation: string;
+  type: QuizQuestion["type"];
+};
+
+const freeTextQuestions: QuizQuestion[] = [
+  {
+    id: 101,
+    topic: "Normalization",
+    type: "free-text",
+    question: "In one sentence, why do we use normalization in databases?",
+    correctAnswer: "To reduce redundancy",
+    acceptedAnswers: [
+      "reduce redundancy",
+      "reduces redundancy",
+      "avoid duplication",
+      "avoid duplicate data",
+      "remove duplicate data",
+      "organize data",
+      "تقليل التكرار",
+      "منع التكرار",
+      "تنظيم البيانات",
+    ],
+    explanation:
+      "Normalization is used to organize data and reduce repeated or duplicated data.",
+  },
+  {
+    id: 102,
+    topic: "ERD",
+    type: "free-text",
+    question: "Write one example of an entity that can appear in an ERD.",
+    correctAnswer: "Student",
+    acceptedAnswers: [
+      "student",
+      "course",
+      "tutor",
+      "teacher",
+      "learner",
+      "customer",
+      "order",
+      "product",
+      "book",
+      "طالب",
+      "كورس",
+      "مدرس",
+      "مستخدم",
+    ],
+    explanation:
+      "An entity is a real-world object such as Student, Course, Tutor, Customer, or Order.",
+  },
+];
+
+function normalizeAnswer(answer: string) {
+  return answer.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function checkFreeTextAnswer(answer: string, question: QuizQuestion) {
+  const normalizedAnswer = normalizeAnswer(answer);
+
+  const acceptedAnswers = [
+    question.correctAnswer,
+    ...(question.acceptedAnswers || []),
+  ].map(normalizeAnswer);
+
+  return acceptedAnswers.some((acceptedAnswer) =>
+    normalizedAnswer.includes(acceptedAnswer)
+  );
+}
+
 function LearnerQuizzesPage() {
   const { lang, setLang, dir, isArabic } = useEduLang();
 
-  const questions = edQuizQuestions as Array<Record<string, any>>;
+  const questions: QuizQuestion[] = [
+    ...edQuizQuestions.map((question) => ({
+      ...question,
+      type: "choice" as const,
+    })),
+    ...freeTextQuestions,
+  ];
+
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedAnswer, setSelectedAnswer] = useState("");
+  const [currentAnswer, setCurrentAnswer] = useState("");
   const [score, setScore] = useState(0);
   const [finished, setFinished] = useState(false);
+  const [reviewItems, setReviewItems] = useState<QuizReviewItem[]>([]);
 
-  const currentQuestion = questions[currentIndex] || {};
-  const options =
-    currentQuestion.options ||
-    currentQuestion.answers ||
-    (isArabic
-      ? ["الخيار الأول", "الخيار الثاني", "الخيار الثالث", "الخيار الرابع"]
-      : ["First option", "Second option", "Third option", "Fourth option"]);
+  const currentQuestion = questions[currentIndex];
+  const isFreeTextQuestion = currentQuestion?.type === "free-text";
+  const options = currentQuestion?.options || [];
 
-  const correctAnswer =
-    currentQuestion.correctAnswer || currentQuestion.answer || options[0];
+  function isCurrentAnswerCorrect() {
+    if (!currentQuestion) {
+      return false;
+    }
+
+    if (currentQuestion.type === "free-text") {
+      return checkFreeTextAnswer(currentAnswer, currentQuestion);
+    }
+
+    return currentAnswer === currentQuestion.correctAnswer;
+  }
 
   function handleNext() {
-    if (!selectedAnswer) {
+    if (!currentQuestion || !currentAnswer.trim()) {
       return;
     }
 
-    if (selectedAnswer === correctAnswer) {
-      setScore((currentScore) => currentScore + 1);
-    }
+    const isCorrect = isCurrentAnswerCorrect();
+    const nextScore = score + (isCorrect ? 1 : 0);
+
+    const nextReviewItem: QuizReviewItem = {
+      question: currentQuestion.question,
+      userAnswer: currentAnswer,
+      correctAnswer: currentQuestion.correctAnswer,
+      isCorrect,
+      explanation: currentQuestion.explanation,
+      type: currentQuestion.type,
+    };
+
+    setScore(nextScore);
+    setReviewItems((items) => [...items, nextReviewItem]);
 
     if (currentIndex === questions.length - 1) {
       setFinished(true);
@@ -42,17 +150,19 @@ function LearnerQuizzesPage() {
     }
 
     setCurrentIndex((index) => index + 1);
-    setSelectedAnswer("");
+    setCurrentAnswer("");
   }
 
   function restartQuiz() {
     setCurrentIndex(0);
-    setSelectedAnswer("");
+    setCurrentAnswer("");
     setScore(0);
     setFinished(false);
+    setReviewItems([]);
   }
 
-  const finalScore = questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
+  const finalScore =
+    questions.length > 0 ? Math.round((score / questions.length) * 100) : 0;
 
   const t = {
     dashboard: isArabic ? "لوحة المتعلم" : "Dashboard",
@@ -63,22 +173,40 @@ function LearnerQuizzesPage() {
     logout: isArabic ? "تسجيل الخروج" : "Logout",
 
     badge: isArabic ? "اختبار تفاعلي" : "Interactive Quiz",
-    title: isArabic ? "اختبر فهمك واكتشف نقاط ضعفك" : "Test your understanding and find weak points",
+    title: isArabic
+      ? "اختبر فهمك واكتشف نقاط ضعفك"
+      : "Test your understanding and find weak points",
     desc: isArabic
-      ? "أجب عن الأسئلة، ثم راجع نتيجتك والمواضيع التي تحتاج إلى شرح إضافي."
-      : "Answer the questions, then review your score and the topics that need extra explanation.",
+      ? "أجب عن أسئلة اختيارية وأسئلة كتابة قصيرة، ثم راجع نتيجتك والمواضيع التي تحتاج إلى شرح إضافي."
+      : "Answer multiple-choice and short free-text questions, then review your score and weak topics.",
 
     question: isArabic ? "السؤال" : "Question",
     from: isArabic ? "من" : "of",
     next: isArabic ? "التالي" : "Next",
     finish: isArabic ? "إنهاء الاختبار" : "Finish Quiz",
-    choose: isArabic ? "اختر إجابة للمتابعة" : "Choose an answer to continue",
+    choose: isArabic ? "اختر أو اكتب إجابة للمتابعة" : "Choose or write an answer to continue",
     result: isArabic ? "نتيجة الاختبار" : "Quiz Result",
     yourScore: isArabic ? "نتيجتك" : "Your Score",
     correct: isArabic ? "إجابات صحيحة" : "Correct answers",
     restart: isArabic ? "إعادة الاختبار" : "Restart Quiz",
     reviewWeaknesses: isArabic ? "راجع نقاط ضعفك" : "Review Weaknesses",
     askAI: isArabic ? "اسأل المدرّس الذكي" : "Ask AI Tutor",
+    textAnswer: isArabic ? "إجابتك" : "Your answer",
+    freeTextPlaceholder: isArabic
+      ? "اكتب إجابة قصيرة هنا..."
+      : "Write a short answer here...",
+    freeTextHint: isArabic
+      ? "ملاحظة: حالياً يتم تقييم السؤال الكتابي بالكلمات المفتاحية فقط إلى أن يتم ربطه بالـ backend أو AI."
+      : "Note: free-text answers are currently checked by keywords until backend or AI grading is connected.",
+    questionType: isArabic ? "نوع السؤال" : "Question type",
+    multipleChoice: isArabic ? "اختياري" : "Multiple choice",
+    freeText: isArabic ? "كتابة قصيرة" : "Free text",
+    reviewAnswers: isArabic ? "مراجعة الإجابات" : "Answer Review",
+    yourAnswer: isArabic ? "إجابتك" : "Your answer",
+    expectedAnswer: isArabic ? "الإجابة المتوقعة" : "Expected answer",
+    explanation: isArabic ? "التفسير" : "Explanation",
+    right: isArabic ? "صحيح" : "Correct",
+    wrong: isArabic ? "غير صحيح" : "Incorrect",
   };
 
   return (
@@ -111,7 +239,7 @@ function LearnerQuizzesPage() {
           </div>
         </header>
 
-        {!finished ? (
+        {!finished && currentQuestion ? (
           <section className="em-dashboard-grid">
             <div className="em-panel">
               <div className="em-panel-head">
@@ -119,34 +247,58 @@ function LearnerQuizzesPage() {
                   <span>
                     {t.question} {currentIndex + 1} {t.from} {questions.length}
                   </span>
-                  <h2>
-                    {currentQuestion.question ||
-                      currentQuestion.title ||
-                      (isArabic
-                        ? "ما الإجابة الصحيحة لهذا السؤال؟"
-                        : "What is the correct answer for this question?")}
-                  </h2>
+                  <h2>{currentQuestion.question}</h2>
                 </div>
               </div>
 
-              <div className="em-result-list">
-                {options.map((option: string) => (
-                  <button
-                    key={option}
-                    type="button"
-                    className={
-                      selectedAnswer === option
-                        ? "em-choice-card em-stat-orange"
-                        : "em-choice-card"
-                    }
-                    onClick={() => setSelectedAnswer(option)}
-                  >
-                    <strong>{option}</strong>
-                  </button>
-                ))}
-              </div>
+              {isFreeTextQuestion ? (
+                <div>
+                  <label className="em-wide-field" style={{ marginTop: 0 }}>
+                    {t.textAnswer}
+                    <textarea
+                      value={currentAnswer}
+                      onChange={(event) => setCurrentAnswer(event.target.value)}
+                      placeholder={t.freeTextPlaceholder}
+                    />
+                  </label>
 
-              {!selectedAnswer && <p className="em-builder-copy">{t.choose}</p>}
+                  <p className="em-builder-copy">{t.freeTextHint}</p>
+                </div>
+              ) : (
+                <div className="em-result-list" style={{ gap: "10px" }}>
+                  {options.map((option) => {
+                    const isSelected = currentAnswer === option;
+
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setCurrentAnswer(option)}
+                        className="em-course-card"
+                        style={{
+                          width: "100%",
+                          minHeight: "56px",
+                          padding: "14px 16px",
+                          cursor: "pointer",
+                          textAlign: isArabic ? "right" : "left",
+                          border: isSelected
+                            ? "2px solid #ff8600"
+                            : "1px solid rgba(174, 184, 254, 0.55)",
+                          background: isSelected
+                            ? "rgba(255, 134, 0, 0.16)"
+                            : "rgba(241, 242, 246, 0.46)",
+                        }}
+                      >
+                        <strong style={{ fontSize: "14px" }}>{option}</strong>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {!currentAnswer.trim() && (
+                <p className="em-builder-copy">{t.choose}</p>
+              )}
 
               <button
                 type="button"
@@ -174,7 +326,10 @@ function LearnerQuizzesPage() {
                 <span>
                   {t.question}: {currentIndex + 1}
                 </span>
-                <span>{currentQuestion.topic || (isArabic ? "موضوع عام" : "General topic")}</span>
+                <span>{currentQuestion.topic}</span>
+                <span>
+                  {t.questionType}: {isFreeTextQuestion ? t.freeText : t.multipleChoice}
+                </span>
               </div>
 
               <p className="em-builder-copy">
@@ -221,6 +376,40 @@ function LearnerQuizzesPage() {
               <Link to="/learner/ask" className="em-btn em-btn-soft">
                 {t.askAI}
               </Link>
+            </div>
+
+            <div className="em-panel-head em-space-top">
+              <div>
+                <span>{t.reviewAnswers}</span>
+                <h2>{isArabic ? "تفاصيل إجاباتك" : "Your answer details"}</h2>
+              </div>
+            </div>
+
+            <div className="em-course-list">
+              {reviewItems.map((item, index) => (
+                <article key={`${item.question}-${index}`} className="em-course-card">
+                  <div className="em-card-topline">
+                    <span>{item.type === "free-text" ? t.freeText : t.multipleChoice}</span>
+                    <small className={item.isCorrect ? "em-success-pill" : "em-danger-pill"}>
+                      {item.isCorrect ? t.right : t.wrong}
+                    </small>
+                  </div>
+
+                  <h3>{item.question}</h3>
+                  <p>
+                    <strong>{t.yourAnswer}: </strong>
+                    {item.userAnswer}
+                  </p>
+                  <p>
+                    <strong>{t.expectedAnswer}: </strong>
+                    {item.correctAnswer}
+                  </p>
+                  <p>
+                    <strong>{t.explanation}: </strong>
+                    {item.explanation}
+                  </p>
+                </article>
+              ))}
             </div>
           </section>
         )}

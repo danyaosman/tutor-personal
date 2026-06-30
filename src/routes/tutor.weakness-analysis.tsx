@@ -32,23 +32,24 @@ function TutorWeaknessAnalysisPage() {
 
     learnerResults: isArabic ? "نتائج المتعلمين" : "Learner Results",
     learnerResultsDesc: isArabic
-      ? "آخر نتائج الاختبارات وتحليل المواضيع الضعيفة"
-      : "Latest quiz results and weak topic analysis",
+      ? "بطاقات مرتبة لكل متعلم مع النتيجة والمواضيع التي تحتاج متابعة"
+      : "Organized cards for each learner with score and weak topics",
 
     learner: isArabic ? "المتعلم" : "Learner",
     course: isArabic ? "الكورس" : "Course",
     score: isArabic ? "النتيجة" : "Score",
-    topic: isArabic ? "نقاط الضعف" : "Weaknesses",
-    status: isArabic ? "الحالة" : "Status",
-
     good: isArabic ? "جيد" : "Good",
     support: isArabic ? "يحتاج دعم" : "Needs support",
     review: isArabic ? "مراجعة مع المتعلم" : "Review with learner",
 
     commonWeaknesses: isArabic ? "أكثر المواضيع ضعفاً" : "Most Common Weaknesses",
     commonDesc: isArabic
-      ? "مواضيع متكررة في نتائج المتعلمين"
+      ? "مواضيع تكررت في نتائج المتعلمين"
       : "Topics repeated across learner results",
+    actionPlan: isArabic ? "خطة متابعة سريعة" : "Quick Follow-up Plan",
+    actionDesc: isArabic
+      ? "خطوات تساعد المدرّس على تحسين النتائج"
+      : "Steps that help the tutor improve results",
   };
 
   const averageScore =
@@ -65,9 +66,36 @@ function TutorWeaknessAnalysisPage() {
     (result) => Number(result.score || result.averageScore || 0) < 70
   );
 
-  const topics = results
-    .flatMap((result) => result.weakTopics || result.weaknesses || [])
+  const allTopics = results.flatMap(
+    (result) => result.weakTopics || result.weaknesses || []
+  );
+
+  const topicCounts = allTopics.reduce<Record<string, number>>((counts, topic) => {
+    counts[topic] = (counts[topic] || 0) + 1;
+    return counts;
+  }, {});
+
+  const sortedTopics = Object.entries(topicCounts)
+    .sort((a, b) => b[1] - a[1])
     .slice(0, 8);
+
+  const fallbackTopics = isArabic
+    ? ["حل المسائل", "المفاهيم الأساسية", "التحليل", "التطبيق العملي"]
+    : ["Problem solving", "Core concepts", "Analysis", "Practical practice"];
+
+  const plan = isArabic
+    ? [
+        "ابدأ بالمتعلمين أصحاب النتائج الأقل من 70%.",
+        "راجع أكثر موضوع متكرر في نقاط الضعف.",
+        "أضف مثالاً عملياً أو شرحاً مختصراً داخل التوأم الرقمي.",
+        "اطلب من المتعلمين إعادة اختبار قصير بعد المراجعة.",
+      ]
+    : [
+        "Start with learners scoring below 70%.",
+        "Review the most repeated weak topic.",
+        "Add a practical example or short explanation inside the Digital Twin.",
+        "Ask learners to retake a short quiz after review.",
+      ];
 
   return (
     <main className="em-app-page" dir={dir}>
@@ -112,7 +140,7 @@ function TutorWeaknessAnalysisPage() {
 
           <article className="em-stat-card">
             <span>{t.weakTopics}</span>
-            <strong>{topics.length || 6}</strong>
+            <strong>{allTopics.length || fallbackTopics.length}</strong>
             <p>{isArabic ? "موضوع يحتاج مراجعة" : "topics to review"}</p>
           </article>
 
@@ -124,7 +152,7 @@ function TutorWeaknessAnalysisPage() {
         </section>
 
         <section className="em-dashboard-grid">
-          <div className="em-panel em-table-panel">
+          <div className="em-panel">
             <div className="em-panel-head">
               <div>
                 <span>{t.learnerResults}</span>
@@ -132,30 +160,50 @@ function TutorWeaknessAnalysisPage() {
               </div>
             </div>
 
-            <div className="em-results-table">
-              <div className="em-table-row em-table-heading">
-                <span>{t.learner}</span>
-                <span>{t.course}</span>
-                <span>{t.score}</span>
-                <span>{t.status}</span>
-              </div>
-
+            <div className="em-course-list">
               {results.map((result, index) => {
                 const score = Number(result.score || result.averageScore || 76);
                 const learnerName =
                   result.learnerName || result.name || (isArabic ? "متعلم" : "Learner");
                 const courseName =
                   result.courseName || result.course || (isArabic ? "كورس تعليمي" : "Course");
+                const weakTopics = result.weakTopics || result.weaknesses || [];
+                const needsSupport = score < 70;
 
                 return (
-                  <div key={index} className="em-table-row">
-                    <span>{learnerName}</span>
-                    <span>{courseName}</span>
-                    <span>{score}%</span>
-                    <span className={score < 70 ? "em-danger-pill" : "em-success-pill"}>
-                      {score < 70 ? t.support : t.good}
-                    </span>
-                  </div>
+                  <article key={`${learnerName}-${index}`} className="em-course-card">
+                    <div className="em-card-topline">
+                      <span>{t.learner}</span>
+                      <small
+                        style={{
+                          color: "white",
+                          background: needsSupport ? "#ff8600" : "#22c55e",
+                        }}
+                      >
+                        {score}% • {needsSupport ? t.support : t.good}
+                      </small>
+                    </div>
+
+                    <h3>{learnerName}</h3>
+                    <p>
+                      <strong>{t.course}: </strong>
+                      {courseName}
+                    </p>
+
+                    <div className="em-pill-row">
+                      {(weakTopics.length ? weakTopics : fallbackTopics.slice(0, 2)).map(
+                        (topic: string) => (
+                          <span key={`${learnerName}-${topic}`}>{topic}</span>
+                        )
+                      )}
+                    </div>
+
+                    <div className="em-learner-actions">
+                      <Link to="/tutor/digital-twin" className="em-btn em-btn-soft">
+                        {t.review}
+                      </Link>
+                    </div>
+                  </article>
                 );
               })}
             </div>
@@ -170,25 +218,39 @@ function TutorWeaknessAnalysisPage() {
             </div>
 
             <div className="em-topic-cloud">
-              {(topics.length
-                ? topics
-                : isArabic
-                  ? ["حل المسائل", "المفاهيم الأساسية", "التحليل", "التطبيق العملي"]
-                  : ["Problem solving", "Core concepts", "Analysis", "Practical practice"]
-              ).map((topic, index) => (
-                <span key={`${topic}-${index}`}>{topic}</span>
+              {(sortedTopics.length
+                ? sortedTopics
+                : fallbackTopics.map((topic) => [topic, 1] as [string, number])
+              ).map(([topic, count]) => (
+                <span key={topic}>
+                  {topic} {count > 1 ? `×${count}` : ""}
+                </span>
               ))}
             </div>
 
-            <p className="em-builder-copy">
-              {isArabic
-                ? "يمكن للمدرّس استخدام هذه المعلومات لتعديل طريقة الشرح أو إضافة أمثلة إضافية داخل التوأم الرقمي."
-                : "The tutor can use this information to adjust teaching instructions or add more examples inside the Digital Twin."}
-            </p>
+            <div className="em-panel-head em-space-top">
+              <div>
+                <span>{t.actionPlan}</span>
+                <h2>{t.actionDesc}</h2>
+              </div>
+            </div>
 
-            <Link to="/tutor/digital-twin" className="em-btn em-btn-primary">
-              {t.review}
-            </Link>
+            <div className="em-course-list">
+              {plan.map((step, index) => (
+                <article key={step} className="em-course-card">
+                  <div className="em-card-topline">
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                  </div>
+                  <h3>{step}</h3>
+                </article>
+              ))}
+            </div>
+
+            <div className="em-learner-actions">
+              <Link to="/tutor/digital-twin" className="em-btn em-btn-primary">
+                {t.review}
+              </Link>
+            </div>
           </div>
         </section>
 

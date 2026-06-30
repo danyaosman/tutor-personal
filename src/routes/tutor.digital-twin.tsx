@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, type ChangeEvent } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { EduFooter, LanguageToggle, useEduLang } from "../lib/edumindUi";
 
 export const Route = createFileRoute("/tutor/digital-twin")({
@@ -112,6 +112,18 @@ function TutorDigitalTwinPage() {
     return `${(size / (1024 * 1024)).toFixed(2)} MB`;
   }
 
+  function getSavedTwins() {
+    try {
+      const savedTwins = JSON.parse(
+        localStorage.getItem("edumind_digital_twins") || "[]"
+      );
+
+      return Array.isArray(savedTwins) ? savedTwins : [];
+    } catch {
+      return [];
+    }
+  }
+
   function handleCreateDigitalTwin() {
     const isMissingRequiredData =
       !form.courseName.trim() ||
@@ -139,16 +151,17 @@ function TutorDigitalTwinPage() {
       createdAt: new Date().toISOString(),
     };
 
-    const savedTwins = JSON.parse(
-      localStorage.getItem("edumind_digital_twins") || "[]"
-    );
-
     localStorage.setItem(
       "edumind_digital_twins",
-      JSON.stringify([...savedTwins, newDigitalTwin])
+      JSON.stringify([...getSavedTwins(), newDigitalTwin])
     );
 
     setCreateMessage(t.success);
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    handleCreateDigitalTwin();
   }
 
   return (
@@ -197,40 +210,42 @@ function TutorDigitalTwinPage() {
               </div>
             </div>
 
-            <form className="em-builder-form">
-              <label>
-                {t.courseName}
-                <input
-                  name="courseName"
-                  value={form.courseName}
-                  onChange={handleChange}
-                  placeholder={
-                    isArabic ? "مثال: أساسيات الرياضيات" : "Example: Math Basics"
-                  }
-                />
-              </label>
+            <form onSubmit={handleSubmit} className="em-builder-form">
+              <div className="em-form-grid-premium">
+                <label style={{ gridColumn: "1 / -1" }}>
+                  {t.courseName}
+                  <input
+                    name="courseName"
+                    value={form.courseName}
+                    onChange={handleChange}
+                    placeholder={
+                      isArabic ? "مثال: أساسيات الرياضيات" : "Example: Math Basics"
+                    }
+                  />
+                </label>
 
-              <label>
-                {t.subject}
-                <input
-                  name="subject"
-                  value={form.subject}
-                  onChange={handleChange}
-                  placeholder={isArabic ? "مثال: رياضيات" : "Example: Mathematics"}
-                />
-              </label>
+                <label>
+                  {t.subject}
+                  <input
+                    name="subject"
+                    value={form.subject}
+                    onChange={handleChange}
+                    placeholder={isArabic ? "مثال: رياضيات" : "Example: Mathematics"}
+                  />
+                </label>
 
-              <label>
-                {t.grade}
-                <input
-                  name="grade"
-                  value={form.grade}
-                  onChange={handleChange}
-                  placeholder={isArabic ? "مثال: سنة أولى" : "Example: First Year"}
-                />
-              </label>
+                <label>
+                  {t.grade}
+                  <input
+                    name="grade"
+                    value={form.grade}
+                    onChange={handleChange}
+                    placeholder={isArabic ? "مثال: سنة أولى" : "Example: First Year"}
+                  />
+                </label>
+              </div>
 
-              <label>
+              <label className="em-wide-field">
                 {t.description}
                 <textarea
                   name="description"
@@ -238,13 +253,13 @@ function TutorDigitalTwinPage() {
                   onChange={handleChange}
                   placeholder={
                     isArabic
-                      ? "اكتب وصفاً قصيراً للكورس..."
+                      ? "اكتبي وصفاً قصيراً للكورس..."
                       : "Write a short course description..."
                   }
                 />
               </label>
 
-              <label>
+              <label className="em-wide-field">
                 {t.instructions}
                 <textarea
                   name="instructions"
@@ -271,13 +286,12 @@ function TutorDigitalTwinPage() {
             <label className="em-upload-action">
               <input
                 type="file"
-                accept=".pdf,application/pdf"
+                accept="application/pdf,.pdf"
                 onChange={handleFileChange}
                 style={{ display: "none" }}
               />
 
               <strong>PDF</strong>
-
               <span>{selectedFile ? selectedFile.name : t.uploadDesc}</span>
             </label>
 
