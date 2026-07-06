@@ -1,3 +1,4 @@
+from .retrieval_service import RetrievalService
 import logging
 import re
 
@@ -12,48 +13,7 @@ MAX_SNIPPET_CHARS = 700
 logger = logging.getLogger(__name__)
 
 
-def tokenize(text):
-    return {
-        token.lower()
-        for token in re.findall(r"\w+", text, flags=re.UNICODE)
-        if len(token) > 2
-    }
 
-
-def score_chunk(chunk, question_tokens):
-    content = chunk.content.lower()
-    return sum(content.count(token) for token in question_tokens)
-
-
-def find_relevant_chunks(course, question, limit=MAX_SOURCES):
-    chunks = (
-        ResourceChunk.objects.filter(
-            resource__course=course,
-            resource__processing_status="completed",
-            resource__is_style_example=False,
-        )
-        .select_related("resource")
-        .order_by("resource_id", "chunk_index")
-    )
-    question_tokens = tokenize(question)
-
-    if not question_tokens:
-        return list(chunks[:limit])
-
-    scored_chunks = [
-        (score_chunk(chunk, question_tokens), chunk)
-        for chunk in chunks
-    ]
-    matching_chunks = [
-        chunk
-        for score, chunk in sorted(scored_chunks, key=lambda item: item[0], reverse=True)
-        if score > 0
-    ]
-
-    if matching_chunks:
-        return matching_chunks[:limit]
-
-    return list(chunks[:limit])
 
 
 def build_source_reference(chunk):
@@ -249,7 +209,7 @@ def generate_ai_answer(course, question, chunks):
 
 
 def answer_course_question(course, question):
-    chunks = find_relevant_chunks(course, question)
+    chunks = RetrievalService.retrieve_chunks(course, question)
     try:
         answer = generate_ai_answer(course, question, chunks)
     except (requests.RequestException, ValueError) as exc:

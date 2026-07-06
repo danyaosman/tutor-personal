@@ -1,6 +1,7 @@
 from django.db import models
 from courses.models import CourseResource,Course
 from accounts.models import User
+from pgvector.django import VectorField
 
 
 class ResourceChunk(models.Model):
@@ -8,19 +9,23 @@ class ResourceChunk(models.Model):
     resource = models.ForeignKey(
         CourseResource,
         on_delete=models.CASCADE,
-        related_name="chunks"
+        related_name="chunks",
     )
 
     chunk_index = models.IntegerField()
 
     content = models.TextField()
 
-
     page_number = models.IntegerField(
         null=True,
-        blank=True
+        blank=True,
     )
 
+    embedding = VectorField(
+        dimensions=1024,
+        null=True,
+        blank=True,
+    )
 
 class ChatSession(models.Model):
 
