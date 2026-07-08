@@ -1,0 +1,149 @@
+from rest_framework import serializers
+
+from .models import ClassroomEnrollment, Course, CourseResource, Syllabus
+
+VALID_GRADE_LEVELS = {str(grade) for grade in range(1, 13)}
+
+
+class CourseStudentSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    username = serializers.CharField()
+    email = serializers.EmailField()
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    full_name = serializers.SerializerMethodField()
+    enrolled_at = serializers.DateTimeField()
+
+    def get_full_name(self, obj):
+        return obj.get_full_name() or obj.username
+
+
+class CourseSerializer(serializers.ModelSerializer):
+    teacher_name = serializers.SerializerMethodField()
+    student_count = serializers.IntegerField(read_only=True, default=0)
+    resource_count = serializers.IntegerField(read_only=True, default=0)
+
+    class Meta:
+        model = Course
+        fields = [
+            "id",
+            "title",
+            "description",
+            "subject",
+            "grade_level",
+            "status",
+            "teacher_name",
+            "student_count",
+            "resource_count",
+            "created_at",
+        ]
+        read_only_fields = ["id", "teacher_name", "created_at"]
+
+    def get_teacher_name(self, obj):
+        return obj.teacher.get_full_name() or obj.teacher.username
+
+    def validate_status(self, value):
+        allowed_statuses = {"draft", "active", "archived"}
+        normalized_value = value.lower()
+        if normalized_value not in allowed_statuses:
+            raise serializers.ValidationError(
+                "Status must be draft, active, or archived."
+            )
+        return normalized_value
+
+    def validate_grade_level(self, value):
+        normalized_value = value.strip()
+        if normalized_value not in VALID_GRADE_LEVELS:
+            raise serializers.ValidationError("Grade level must be a number from 1 to 12.")
+        return normalized_value
+
+
+class LearnerCourseSerializer(CourseSerializer):
+    is_enrolled = serializers.SerializerMethodField()
+
+    class Meta(CourseSerializer.Meta):
+        fields = CourseSerializer.Meta.fields + ["is_enrolled"]
+
+    def get_is_enrolled(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        return ClassroomEnrollment.objects.filter(
+            student=request.user,
+            classroom__course=obj,
+        ).exists()
+
+
+class CourseResourceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CourseResource
+        fields = [
+            "id",
+            "file_name",
+            "file",
+            "file_size",
+            "is_style_example",
+            "processing_status",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "file_size",
+            "processing_status",
+            "created_at",
+        ]
+        extra_kwargs = {
+            "file_name": {"required": False},
+        }
+
+    def validate_file_name(self, value):
+        normalized_value = value.strip()
+        if not normalized_value:
+            raise serializers.ValidationError("File name cannot be empty.")
+        return normalized_value
+
+    def validate_file(self, value):
+        if not value.name.lower().endswith(".pdf"):
+            raise serializers.ValidationError("Only PDF files are supported.")
+        if value.size > 10 * 1024 * 1024:
+            raise serializers.ValidationError("PDF files must be 10 MB or smaller.")
+        return value
+
+
+class SyllabusSerializer(serializers.ModelSerializer):
+    course_id = serializers.IntegerField(read_only=True)
+    course_title = serializers.CharField(source="course.title", read_only=True)
+    content = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Syllabus
+        fields = [
+            "id",
+            "course_id",
+            "course_title",
+            "generated_content",
+            "edited_content",
+            "content",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "course_id",
+            "course_title",
+            "generated_content",
+            "content",
+            "updated_at",
+        ]
+
+    def get_content(self, obj):
+        return obj.edited_content or obj.generated_content
+
+    def validate_edited_content(self, value):
+        normalized_value = value.strip()
+        if not normalized_value:
+            raise serializers.ValidationError("Syllabus content cannot be empty.")
+        return normalized_value
+
+
+class SyllabusGenerateSerializer(serializers.Serializer):
+    notes = serializers.CharField(required=False, allow_blank=True, max_length=10000)
