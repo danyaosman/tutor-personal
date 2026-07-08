@@ -1,0 +1,801 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { LearnerLayout } from "@/components/learner/LearnerLayout";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  chatWithCourse,
+  generateCourseFlashcards,
+  generateCourseQuiz,
+  getChatSession,
+  listCourseChatSessions,
+  listEnrolledCourses,
+  type CourseChatResponse,
+  type CourseChatSource,
+} from "@/lib/api";
+import {
+  ArrowDown,
+  ArrowLeft,
+  Bot,
+  Brain,
+  CheckCircle2,
+  HelpCircle,
+  Loader2,
+  MessageSquare,
+  Plus,
+  Layers,
+  Search,
+  Send,
+  User,
+} from "lucide-react";
+
+export const Route = createFileRoute("/learner/courses/$courseId")({
+  head: () => ({ meta: [{ title: "Course Notebook - AI Tutor" }] }),
+  component: LearnerCourseNotebook,
+});
+
+type ChatBubble = {
+  id: string;
+  role: "student" | "ai";
+  text: string;
+  sources?: CourseChatResponse["sources"];
+};
+
+const processSteps = [
+  "Reading your question...",
+  "Searching the course resources...",
+  "Selecting the most relevant PDF chunks...",
+  "Preparing a grounded answer...",
+];
+
+const CHAT_STICKY_BOTTOM_THRESHOLD = 96;
+const CHAT_JUMP_BUTTON_THRESHOLD = 260;
+
+function LearnerCourseNotebook() {
+  const { courseId: courseIdParam } = Route.useParams();
+  const courseId = Number(courseIdParam);
+  const queryClient = useQueryClient();
+
+  const [question, setQuestion] = useState("");
+  const [messages, setMessages] = useState<ChatBubble[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
+  const [loadingSessionId, setLoadingSessionId] = useState<number | null>(null);
+  const [sessionLoadError, setSessionLoadError] = useState("");
+
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
+  const [historySearch, setHistorySearch] = useState("");
+
+  const [activeSteps, setActiveSteps] = useState<string[]>([]);
+  const [streamingAnswer, setStreamingAnswer] = useState("");
+  const [streamingSources, setStreamingSources] = useState<CourseChatResponse["sources"]>([]);
+  const [selectedSource, setSelectedSource] = useState<CourseChatSource | null>(null);
+  const [selectedSourceMessageId, setSelectedSourceMessageId] = useState<string | null>(null);
+  const [studyToolMessage, setStudyToolMessage] = useState("");
+  const [showJumpToEnd, setShowJumpToEnd] = useState(false);
+
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const streamTimerRef = useRef<ReturnType<typeof window.setInterval> | null>(null);
+  const chatScrollFrameRef = useRef<number | null>(null);
+  const shouldStickToBottomRef = useRef(true);
+
+  const enrolledCoursesQuery = useQuery({
+    queryKey: ["enrolled-courses"],
+    queryFn: listEnrolledCourses,
+  });
+
+  const chatSessionsQuery = useQuery({
+    queryKey: ["course-chat-sessions", courseId],
+    queryFn: () => listCourseChatSessions(courseId),
+    enabled: Boolean(courseId),
+  });
+
+  const course = useMemo(
+    () => enrolledCoursesQuery.data?.find((item) => item.id === courseId),
+    [courseId, enrolledCoursesQuery.data],
+  );
+
+  const recentSessions = chatSessionsQuery.data?.slice(0, 3) ?? [];
+
+  const filteredSessions =
+    chatSessionsQuery.data?.filter((session) =>
+      session.last_message?.message_text?.toLowerCase().includes(historySearch.toLowerCase()),
+    ) ?? [];
+
+  const chatMutation = useMutation({
+    mutationFn: (message: string) =>
+      chatWithCourse(courseId, message, activeSessionId ?? undefined),
+
+    onSuccess: (response) => {
+      setActiveSessionId(response.session_id);
+
+      queryClient.invalidateQueries({
+        queryKey: ["course-chat-sessions", courseId],
+      });
+
+      window.setTimeout(() => {
+        setActiveSteps([]);
+        animateAnswer(response.answer, response.sources);
+      }, 700);
+    },
+
+    onError: () => {
+      setActiveSteps([]);
+    },
+  });
+
+  const generateQuizMutation = useMutation({
+    mutationFn: () =>
+      generateCourseQuiz(courseId, { question_count: 5, difficulty_level: "medium" }),
+    onSuccess: async (quiz) => {
+      setStudyToolMessage(`Created "${quiz.title}" with ${quiz.questions.length} questions.`);
+      await queryClient.invalidateQueries({ queryKey: ["learner-quizzes"] });
+    },
+  });
+
+  const generateFlashcardsMutation = useMutation({
+    mutationFn: () => generateCourseFlashcards(courseId, 10),
+    onSuccess: async (cardSet) => {
+      setStudyToolMessage(`Created "${cardSet.title}" with ${cardSet.cards.length} cards.`);
+      await queryClient.invalidateQueries({ queryKey: ["learner-flashcard-sets"] });
+    },
+  });
+
+  useEffect(() => {
+    return () => {
+      if (streamTimerRef.current) {
+        window.clearInterval(streamTimerRef.current);
+      }
+      if (chatScrollFrameRef.current) {
+        window.cancelAnimationFrame(chatScrollFrameRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    scrollChatToBottom();
+  }, [messages.length, streamingAnswer, activeSteps.length]);
+
+  function getChatBottomDistance(chatElement: HTMLDivElement) {
+    return chatElement.scrollHeight - chatElement.scrollTop - chatElement.clientHeight;
+  }
+
+  function updateChatScrollState() {
+    const chatElement = chatScrollRef.current;
+    if (!chatElement) return;
+
+    const bottomDistance = getChatBottomDistance(chatElement);
+    shouldStickToBottomRef.current = bottomDistance <= CHAT_STICKY_BOTTOM_THRESHOLD;
+    setShowJumpToEnd(bottomDistance > CHAT_JUMP_BUTTON_THRESHOLD);
+  }
+
+  function scrollChatToBottom(force = false) {
+    if (!force && !shouldStickToBottomRef.current) {
+      const chatElement = chatScrollRef.current;
+      if (chatElement)
+        setShowJumpToEnd(getChatBottomDistance(chatElement) > CHAT_JUMP_BUTTON_THRESHOLD);
+      return;
+    }
+
+    if (chatScrollFrameRef.current) {
+      window.cancelAnimationFrame(chatScrollFrameRef.current);
+    }
+
+    chatScrollFrameRef.current = window.requestAnimationFrame(() => {
+      const chatElement = chatScrollRef.current;
+      if (!chatElement) return;
+      chatElement.scrollTop = chatElement.scrollHeight;
+      shouldStickToBottomRef.current = true;
+      setShowJumpToEnd(false);
+      chatScrollFrameRef.current = null;
+    });
+  }
+
+  function animateAnswer(answer: string, sources: CourseChatResponse["sources"]) {
+    if (streamTimerRef.current) {
+      window.clearInterval(streamTimerRef.current);
+    }
+
+    const words = answer.split(/(\s+)/);
+    let index = 0;
+
+    setStreamingAnswer("");
+    setStreamingSources(sources);
+
+    streamTimerRef.current = window.setInterval(() => {
+      index += 1;
+      setStreamingAnswer(words.slice(0, index).join(""));
+
+      if (index >= words.length) {
+        if (streamTimerRef.current) {
+          window.clearInterval(streamTimerRef.current);
+        }
+
+        streamTimerRef.current = null;
+
+        setMessages((current) => [
+          ...current,
+          {
+            id: `${Date.now()}-ai`,
+            role: "ai",
+            text: answer,
+            sources,
+          },
+        ]);
+
+        setStreamingAnswer("");
+        setStreamingSources([]);
+      }
+    }, 28);
+  }
+
+  async function openSession(sessionId: number) {
+    try {
+      setLoadingSessionId(sessionId);
+      setSessionLoadError("");
+
+      if (streamTimerRef.current) {
+        window.clearInterval(streamTimerRef.current);
+        streamTimerRef.current = null;
+      }
+
+      const session = await getChatSession(sessionId);
+
+      shouldStickToBottomRef.current = true;
+      setShowJumpToEnd(false);
+      setActiveSessionId(session.id);
+      setSelectedSource(null);
+      setSelectedSourceMessageId(null);
+      setStreamingAnswer("");
+      setStreamingSources([]);
+      setActiveSteps([]);
+      setQuestion("");
+
+      setMessages(
+        session.messages.map((message) => ({
+          id: String(message.id),
+          role: message.sender === "student" ? "student" : "ai",
+          text: message.message_text,
+          sources: message.source_references,
+        })),
+      );
+
+      setIsHistoryDialogOpen(false);
+    } catch (error) {
+      setSessionLoadError(error instanceof Error ? error.message : "Failed to load chat session.");
+    } finally {
+      setLoadingSessionId(null);
+    }
+  }
+
+  function startNewChat() {
+    if (streamTimerRef.current) {
+      window.clearInterval(streamTimerRef.current);
+      streamTimerRef.current = null;
+    }
+
+    setActiveSessionId(null);
+    setMessages([]);
+    setSelectedSource(null);
+    setSelectedSourceMessageId(null);
+    setStreamingAnswer("");
+    setStreamingSources([]);
+    setActiveSteps([]);
+    setQuestion("");
+    setSessionLoadError("");
+    shouldStickToBottomRef.current = true;
+    setShowJumpToEnd(false);
+  }
+
+  function submitQuestion() {
+    const trimmedQuestion = question.trim();
+
+    if (!trimmedQuestion || chatMutation.isPending || streamingAnswer) {
+      return;
+    }
+
+    setMessages((current) => [
+      ...current,
+      {
+        id: `${Date.now()}-student`,
+        role: "student",
+        text: trimmedQuestion,
+      },
+    ]);
+
+    setQuestion("");
+    setActiveSteps(processSteps);
+    setSelectedSource(null);
+    setSelectedSourceMessageId(null);
+    setSessionLoadError("");
+    shouldStickToBottomRef.current = true;
+    scrollChatToBottom(true);
+    chatMutation.mutate(trimmedQuestion);
+  }
+
+  function selectMessageSource(messageId: string, source: CourseChatSource) {
+    setSelectedSource(source);
+    setSelectedSourceMessageId(messageId);
+  }
+
+  return (
+    <LearnerLayout
+      title={course?.title ?? "Course Notebook"}
+      subtitle="Use the course resources and chat with the AI tutor in one workspace."
+      actions={
+        <Button asChild variant="outline">
+          <Link to="/learner/courses">
+            <ArrowLeft className="h-4 w-4" /> Back to Courses
+          </Link>
+        </Button>
+      }
+    >
+      {enrolledCoursesQuery.isPending && (
+        <Card className="border-dashed p-8 text-center text-sm text-muted-foreground">
+          Loading course notebook...
+        </Card>
+      )}
+
+      {enrolledCoursesQuery.error && (
+        <Alert variant="destructive">
+          <AlertDescription>{enrolledCoursesQuery.error.message}</AlertDescription>
+        </Alert>
+      )}
+
+      {!enrolledCoursesQuery.isPending && !course && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            You are not enrolled in this active course, or it is no longer available.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {course && (
+        <>
+          <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+            <div className="space-y-5">
+              <Card className="h-fit border-primary/20 shadow-soft">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Brain className="h-5 w-5 text-primary" /> Study Tools
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      onClick={() => {
+                        setStudyToolMessage("");
+                        generateQuizMutation.mutate();
+                      }}
+                      disabled={generateQuizMutation.isPending}
+                      className="gradient-ai text-white"
+                    >
+                      {generateQuizMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <HelpCircle className="h-4 w-4" />
+                      )}
+                      Quiz
+                    </Button>
+
+                    <Button
+                      onClick={() => {
+                        setStudyToolMessage("");
+                        generateFlashcardsMutation.mutate();
+                      }}
+                      disabled={generateFlashcardsMutation.isPending}
+                      variant="outline"
+                    >
+                      {generateFlashcardsMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Layers className="h-4 w-4" />
+                      )}
+                      Cards
+                    </Button>
+                  </div>
+
+                  {(generateQuizMutation.error || generateFlashcardsMutation.error) && (
+                    <Alert variant="destructive">
+                      <AlertDescription>
+                        {generateQuizMutation.error?.message ??
+                          generateFlashcardsMutation.error?.message}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {studyToolMessage && (
+                    <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-700">
+                      <div className="flex items-start gap-2">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>{studyToolMessage}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button asChild size="sm" variant="ghost">
+                      <Link to="/learner/quizzes">Open Quizzes</Link>
+                    </Button>
+                    <Button asChild size="sm" variant="ghost">
+                      <Link to="/learner/flashcards">Open Cards</Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="h-fit shadow-soft">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5" /> Chat History
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent className="space-y-3">
+                  <Button onClick={startNewChat} variant="outline" className="w-full">
+                    <Plus className="h-4 w-4" /> New Chat
+                  </Button>
+
+                  {chatSessionsQuery.isPending && (
+                    <p className="text-sm text-muted-foreground">Loading chat history...</p>
+                  )}
+
+                  {chatSessionsQuery.error && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{chatSessionsQuery.error.message}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  {sessionLoadError && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{sessionLoadError}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  {chatSessionsQuery.data?.length === 0 && (
+                    <div className="rounded-lg border border-dashed p-4 text-center">
+                      <p className="text-sm font-medium">No previous chats yet</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Start a new chat to save your conversation here.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    {recentSessions.map((session) => (
+                      <button
+                        key={session.id}
+                        type="button"
+                        onClick={() => openSession(session.id)}
+                        className={[
+                          "w-full rounded-lg border p-3 text-left text-sm transition hover:bg-accent",
+                          activeSessionId === session.id
+                            ? "border-primary bg-accent"
+                            : "bg-background",
+                        ].join(" ")}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="line-clamp-1 font-medium">{session.title}</span>
+
+                          {loadingSessionId === session.id && (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                          )}
+                        </div>
+
+                        <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                          {session.last_message?.message_text ?? "No messages yet"}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {(chatSessionsQuery.data?.length ?? 0) > 3 && (
+                    <Button
+                      variant="ghost"
+                      className="w-full"
+                      onClick={() => setIsHistoryDialogOpen(true)}
+                    >
+                      View more
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+
+              {selectedSource && <CitationEvidencePanel source={selectedSource} />}
+            </div>
+
+            <Card className="h-[min(760px,calc(100vh-7rem))] min-h-[640px] shadow-soft">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bot className="h-5 w-5 text-primary" /> AI Tutor Chat
+                </CardTitle>
+              </CardHeader>
+
+              <CardContent className="flex h-[calc(100%-76px)] min-h-0 flex-col">
+                <div className="relative min-h-0 flex-1">
+                  <div
+                    ref={chatScrollRef}
+                    onScroll={updateChatScrollState}
+                    className="h-full min-h-0 space-y-4 overflow-y-auto overscroll-contain rounded-xl border bg-secondary/20 p-4 [overflow-anchor:none]"
+                  >
+                    {messages.length === 0 && !streamingAnswer && activeSteps.length === 0 && (
+                      <div className="grid min-h-[300px] place-items-center text-center">
+                        <div>
+                          <Bot className="mx-auto h-10 w-10 text-muted-foreground" />
+                          <h3 className="mt-3 font-semibold">Ask about this course</h3>
+                          <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                            The AI tutor will search the course PDFs and answer using the most
+                            relevant extracted chunks.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {messages.map((message) => (
+                      <ChatMessageBubble
+                        key={message.id}
+                        message={message}
+                        selectedSource={selectedSource}
+                        selectedSourceMessageId={selectedSourceMessageId}
+                        onSelectSource={selectMessageSource}
+                      />
+                    ))}
+
+                    {activeSteps.length > 0 && (
+                      <div className="rounded-xl border bg-background p-4">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                          <Loader2 className="h-4 w-4 animate-spin" /> AI tutor is working
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          {activeSteps.map((step) => (
+                            <div key={step} className="text-sm text-muted-foreground">
+                              {step}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {streamingAnswer && (
+                      <ChatMessageBubble
+                        message={{
+                          id: "streaming-answer",
+                          role: "ai",
+                          text: streamingAnswer,
+                          sources: streamingSources,
+                        }}
+                        selectedSource={selectedSource}
+                        selectedSourceMessageId={selectedSourceMessageId}
+                        onSelectSource={selectMessageSource}
+                      />
+                    )}
+                  </div>
+                  {showJumpToEnd && !streamingAnswer && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="absolute bottom-4 right-4 shadow-soft"
+                      onClick={() => scrollChatToBottom(true)}
+                    >
+                      <ArrowDown className="h-4 w-4" /> Go to end
+                    </Button>
+                  )}
+                </div>
+
+                {chatMutation.error && (
+                  <Alert variant="destructive" className="mt-4">
+                    <AlertDescription>{chatMutation.error.message}</AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="mt-4 flex gap-3">
+                  <Textarea
+                    value={question}
+                    onChange={(event) => setQuestion(event.target.value)}
+                    placeholder="Ask a question about the course resources..."
+                    className="min-h-[76px]"
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && !event.shiftKey) {
+                        event.preventDefault();
+                        submitQuestion();
+                      }
+                    }}
+                  />
+
+                  <Button
+                    onClick={submitQuestion}
+                    disabled={
+                      !question.trim() || chatMutation.isPending || Boolean(streamingAnswer)
+                    }
+                    className="self-end gradient-ai text-white"
+                  >
+                    <Send className="h-4 w-4" /> Send
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>All Chat History</DialogTitle>
+              </DialogHeader>
+
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={historySearch}
+                  onChange={(event) => setHistorySearch(event.target.value)}
+                  placeholder="Search previous conversations..."
+                  className="pl-9"
+                />
+              </div>
+
+              <div className="max-h-[420px] space-y-2 overflow-y-auto">
+                {filteredSessions.map((session) => (
+                  <button
+                    key={session.id}
+                    type="button"
+                    onClick={() => openSession(session.id)}
+                    className={[
+                      "w-full rounded-lg border p-3 text-left text-sm transition hover:bg-accent",
+                      activeSessionId === session.id ? "border-primary bg-accent" : "bg-background",
+                    ].join(" ")}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="line-clamp-1 font-medium">{session.title}</span>
+
+                      {loadingSessionId === session.id && (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                      )}
+                    </div>
+
+                    <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                      {session.last_message?.message_text ?? "No messages yet"}
+                    </div>
+                  </button>
+                ))}
+
+                {filteredSessions.length === 0 && (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    No conversations found.
+                  </p>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
+    </LearnerLayout>
+  );
+}
+
+function CitationEvidencePanel({ source }: { source: CourseChatSource }) {
+  return (
+    <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-amber-700">
+            Highlighted Citation
+          </div>
+          <div className="mt-1 truncate text-sm font-semibold">Tutor source</div>
+        </div>
+
+        <Badge className="bg-amber-200 text-amber-900 hover:bg-amber-200">
+          {source.page_number ? `Page ${source.page_number}` : "PDF"}
+        </Badge>
+      </div>
+
+      <mark className="mt-3 block rounded-lg bg-amber-200/80 p-3 text-xs leading-relaxed text-amber-950">
+        {source.preview}
+      </mark>
+    </div>
+  );
+}
+
+function sourceKey(source: CourseChatSource) {
+  return `${source.resource_id}-${source.chunk_index}`;
+}
+
+function ChatMessageBubble({
+  message,
+  selectedSource,
+  selectedSourceMessageId,
+  onSelectSource,
+}: {
+  message: ChatBubble;
+  selectedSource: CourseChatSource | null;
+  selectedSourceMessageId: string | null;
+  onSelectSource: (messageId: string, source: CourseChatSource) => void;
+}) {
+  const isStudent = message.role === "student";
+  const [showAllCitations, setShowAllCitations] = useState(false);
+  const citationPreviewCount = 4;
+  const sources = message.sources ?? [];
+  const visibleSources = showAllCitations ? sources : sources.slice(0, citationPreviewCount);
+  const hiddenCitationCount = Math.max(0, sources.length - citationPreviewCount);
+
+  return (
+    <div className={["flex", isStudent ? "justify-end" : "justify-start"].join(" ")}>
+      <div
+        className={[
+          "max-w-[85%] rounded-2xl p-4 text-sm",
+          isStudent ? "bg-primary text-primary-foreground" : "border bg-background text-foreground",
+        ].join(" ")}
+      >
+        <div className="mb-2 flex items-center gap-2 text-xs font-semibold opacity-80">
+          {isStudent ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
+          {isStudent ? "You" : "AI Tutor"}
+        </div>
+
+        <div className="whitespace-pre-wrap">{message.text}</div>
+
+        {!isStudent && sources.length > 0 && (
+          <div className="mt-4 rounded-lg border bg-secondary/20 p-2">
+            <div className="mb-2 text-xs font-semibold text-muted-foreground">Citations</div>
+            <div className="flex flex-wrap gap-2">
+              {visibleSources.map((source, index) => {
+                const active =
+                  selectedSourceMessageId === message.id &&
+                  selectedSource &&
+                  sourceKey(selectedSource) === sourceKey(source);
+                return (
+                  <button
+                    key={sourceKey(source)}
+                    type="button"
+                    title={
+                      source.page_number
+                        ? `Tutor source, page ${source.page_number}`
+                        : "Tutor source"
+                    }
+                    onClick={() => onSelectSource(message.id, source)}
+                    className={[
+                      "rounded-md border px-2 py-1 text-xs font-semibold transition hover:border-amber-400 hover:bg-amber-50 hover:text-amber-950",
+                      active
+                        ? "border-amber-400 bg-amber-100 text-amber-950"
+                        : "bg-background text-foreground",
+                    ].join(" ")}
+                  >
+                    [{index + 1}]
+                  </button>
+                );
+              })}
+
+              {hiddenCitationCount > 0 && !showAllCitations && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setShowAllCitations(true)}
+                >
+                  View more ({hiddenCitationCount})
+                </Button>
+              )}
+
+              {showAllCitations && sources.length > citationPreviewCount && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setShowAllCitations(false)}
+                >
+                  View fewer
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
