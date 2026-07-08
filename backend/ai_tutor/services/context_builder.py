@@ -2,16 +2,7 @@ from ai_tutor.models import ResourceChunk
 
 
 class ContextBuilder:
-    """
-    Turns retrieved chunks into the final prompt context.
-
-    Responsibilities:
-    - remove duplicates
-    - add neighbour chunks
-    - merge adjacent chunks
-    - keep within token budget
-    - format for the LLM
-    """
+  
 
     MAX_CONTEXT_TOKENS = 3000
 
@@ -22,14 +13,7 @@ class ContextBuilder:
     @classmethod
     def build_context(cls, chunks):
 
-        if not chunks:
-            return ""
-
-        chunks = cls.remove_duplicates(chunks)
-
         chunks = cls.expand_with_neighbors(chunks)
-
-        chunks = cls.remove_duplicates(chunks)
 
         chunks = cls.merge_adjacent_chunks(chunks)
 
@@ -38,63 +22,38 @@ class ContextBuilder:
         return cls.format_context(chunks)
 
     @staticmethod
-    def remove_duplicates(chunks):
+    def expand_with_neighbors(chunks):
+    
+
+        expanded = []
 
         seen = set()
-        unique = []
-
-        for chunk in chunks:
-            if chunk.id in seen:
-                continue
-
-            seen.add(chunk.id)
-            unique.append(chunk)
-
-        return unique
-
-    @staticmethod
-    def expand_with_neighbors(chunks):
-
-        expanded = {}
 
         for chunk in chunks:
 
-            expanded[chunk.id] = chunk
-
-            previous_chunk = (
+            neighbors = list(
                 ResourceChunk.objects.filter(
                     resource=chunk.resource,
-                    chunk_index=chunk.chunk_index - 1,
+                    chunk_index__gte=chunk.chunk_index - 1,
+                    chunk_index__lte=chunk.chunk_index + 1,
                 )
                 .select_related("resource")
-                .first()
+                .order_by("chunk_index")
             )
 
-            if previous_chunk:
-                expanded[previous_chunk.id] = previous_chunk
+            for neighbor in neighbors:
 
-            next_chunk = (
-                ResourceChunk.objects.filter(
-                    resource=chunk.resource,
-                    chunk_index=chunk.chunk_index + 1,
-                )
-                .select_related("resource")
-                .first()
-            )
+                if neighbor.id not in seen:
 
-            if next_chunk:
-                expanded[next_chunk.id] = next_chunk
+                    seen.add(neighbor.id)
 
-        return sorted(
-            expanded.values(),
-            key=lambda c: (
-                c.resource_id,
-                c.chunk_index,
-            ),
-        )
+                    expanded.append(neighbor)
+
+        return expanded
 
     @staticmethod
     def merge_adjacent_chunks(chunks):
+   
 
         if not chunks:
             return []
@@ -115,6 +74,7 @@ class ContextBuilder:
             else:
 
                 merged.append(current)
+
                 current = chunk
 
         merged.append(current)
@@ -123,30 +83,32 @@ class ContextBuilder:
 
     @classmethod
     def limit_context(cls, chunks):
+       
+
+        total_tokens = 0
 
         selected = []
-
-        total = 0
 
         for chunk in chunks:
 
             tokens = cls.estimate_tokens(chunk.content)
 
-            if total + tokens > cls.MAX_CONTEXT_TOKENS:
+            if total_tokens + tokens > cls.MAX_CONTEXT_TOKENS:
                 break
 
             selected.append(chunk)
 
-            total += tokens
+            total_tokens += tokens
 
         return selected
 
     @staticmethod
     def format_context(chunks):
+      
 
         sections = []
 
-        for i, chunk in enumerate(chunks, start=1):
+        for index, chunk in enumerate(chunks, start=1):
 
             page = (
                 f"Page {chunk.page_number}"
@@ -155,12 +117,15 @@ class ContextBuilder:
             )
 
             sections.append(
-                f"""Source {i}
+                f"""
+Source {index}
 Resource: {chunk.resource.file_name}
 {page}
 
 {chunk.content.strip()}
-"""
+""".strip()
             )
 
-        return "\n\n-------------------------\n\n".join(sections)
+        return "\n\n----------------------------------------\n\n".join(
+            sections
+        )

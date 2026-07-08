@@ -1,27 +1,34 @@
 from pgvector.django import CosineDistance
 
 from ai_tutor.models import ResourceChunk
-
 from .embedding_service import EmbeddingService
+from .rerank_service import ReRankService
+from .query_analyzer import QueryAnalyzer
 
 
 class RetrievalService:
-    
+    """
+    Performs the first-stage semantic retrieval using pgvector.
+
+    pgvector retrieves a larger candidate pool.
+
+    The candidates are then passed to the ReRankService,
+    which performs a second ranking stage before the
+    ContextBuilder assembles the final prompt.
+    """
 
     DEFAULT_LIMIT = 4
 
-    
+    # retrieve more than we finally return
     CANDIDATE_LIMIT = 20
 
     @classmethod
     def retrieve_chunks(
         cls,
         course,
-        question: str,
-        limit: int | None = None,
+        question,
+        limit=None,
     ):
-       
-
         if limit is None:
             limit = cls.DEFAULT_LIMIT
 
@@ -32,7 +39,15 @@ class RetrievalService:
             query_embedding,
         )
 
-        return candidates[:limit]
+        intent = QueryAnalyzer.analyze(question)
+
+        ranked = ReRankService.rerank(
+            question=question,
+            chunks=candidates,
+            intent=intent,
+        )
+
+        return ranked[:limit]
 
     @classmethod
     def retrieve_candidates(
@@ -40,7 +55,12 @@ class RetrievalService:
         course,
         query_embedding,
     ):
-        
+        """
+        First-stage retrieval.
+
+        Uses pgvector cosine similarity to retrieve the
+        most semantically similar chunks.
+        """
 
         return list(
             ResourceChunk.objects.filter(
